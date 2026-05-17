@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="SinContador"/>
+<meta name="theme-color" content="#0f2419"/>
+<title>SinContador · Panamá</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f0fdf4;font-family:'Inter',sans-serif}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ─── SUPABASE ─────────────────────────────────────────────────────────────────
+const SUPA_URL = "https://rxmyewcccqencycjqxpe.supabase.co";
+const SUPA_KEY = "sb_publishable_iDG0Rnh9ITAl-f8UczBwxQ_eznWejBL";
+const supabase = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ─── STORAGE (cloud per user) ─────────────────────────────────────────────────
+const KEYS = { empleados: "emp_v1", leyes: "leyes_v1", historial: "hist_v1", prestamos: "prest_v1" };
+
+async function load(key, userId) {
+  try {
+    const { data } = await supabase.from("user_data").select("value").eq("user_id", userId).eq("key", key).single();
+    return data ? JSON.parse(data.value) : null;
+  } catch { return null; }
+}
+
+async function save(key, val, userId) {
+  try {
+    await supabase.from("user_data").upsert({ user_id: userId, key, value: JSON.stringify(val) }, { onConflict: "user_id,key" });
+  } catch(e) { console.error(e); }
+}
+
+// ─── LEYES PANAMÁ ─────────────────────────────────────────────────────────────
+const LEYES_DEFAULT = {
+  salarioMinimoR1: 340.00, salarioMinimoR2: 315.00,
+  cssEmpleador: 13.25, cssEmpleado: 9.75,
+  segEduEmpleador: 1.50, segEduEmpleado: 1.25,
+  horasExtraRecargo: 25, horasExtraNocturnas: 50,
+  vacacionesDias: 30, decimoTercerMes: true, horasJornadaDiurna: 8,
+};
+
+const fmt = (n) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n || 0);
+const pct = (b, p) => (b * p) / 100;
+const hoy = () => new Date().toISOString().split("T")[0];
+
+function antiguedad(fechaIngreso) {
+  if (!fechaIngreso) return { años: 0, meses: 0, texto: "—", totalMeses: 0 };
+  const s = new Date(fechaIngreso), h = new Date();
+  let a = h.getFullYear() - s.getFullYear(), m = h.getMonth() - s.getMonth();
+  if (m < 0) { a--; m += 12; }
+  const total = a * 12 + m;
+  const texto = a > 0 ? `${a} año${a !== 1 ? "s" : ""} ${m} mes${m !== 1 ? "es" : ""}` : `${m} mes${m !== 1 ? "es" : ""}`;
+  return { años: a, meses: m, texto, totalMeses: total };
+}
+
+function proximasVacaciones(fechaIngreso, vacacionesDias) {
+  if (!fechaIngreso) return null;
+  const inicio = new Date(fechaIngreso), h = new Date();
+  const aniosCompletos = h.getFullYear() - inicio.getFullYear() + (h >= new Date(h.getFullYear(), inicio.getMonth(), inicio.getDate()) ? 0 : -1);
+  const prox = new Date(inicio);
+  prox.setFullYear(inicio.getFullYear() + aniosCompletos + 1);
+  const diasRestantes = Math.ceil((prox - h) / 86400000);
+  return { fecha: prox.toLocaleDateString("es-PA"), diasRestantes, aniosCumplidos: aniosCompletos + 1 };
+}
+
+function calcularPago(emp, leyes, prestamos, extraDias) {
+  const salarioMensual = parseFloat(emp.salario) || 0;
+  const quincena = salarioMensual / 2;
+  const horasEx = parseFloat(emp.horasExtra) || 0;
+  const horasExNoc = parseFloat(emp.horasExtraNocturnas) || 0;
+  const diasAus = parseFloat(emp.diasAusencia) || 0;
+  const bonos = parseFloat(emp.bonos) || 0;
+  const otrosDeduc = parseFloat(emp.otrosDeduc) || 0;
+  const valorDia = salarioMensual / 30;
+  const valorHora = valorDia / leyes.horasJornadaDiurna;
+  const pagoHorasEx = horasEx * valorHora * (1 + leyes.horasExtraRecargo / 100);
+  const pagoHorasExNoc = horasExNoc * valorHora * (1 + leyes.horasExtraNocturnas / 100);
+  const descAusencias = diasAus * valorDia;
+  const diasLibres = extraDias || [];
+  const pagoDiasLibres = diasLibres.reduce((sum, d) => {
+    if (d.modo === "fijo") return sum + (parseFloat(d.monto) || 0);
+    return sum + valorDia * (1 + (parseFloat(d.recargo) || 100) / 100);
+  }, 0);
+  const prestEmpleado = (prestamos || []).filter(p => p.empleadoId === emp.id && p.saldo > 0);
+  const descPrestamo = prestEmpleado.reduce((s, p) => s + Math.min(p.cuotaMensual, p.saldo), 0);
+  const netoEmpleado = quincena + pagoHorasEx + pagoHorasExNoc + bonos + pagoDiasLibres - descAusencias - otrosDeduc - descPrestamo;
+  const cssPatron = pct(salarioMensual, leyes.cssEmpleador);
+  const segEduPatron = pct(salarioMensual, leyes.segEduEmpleador);
+  const decimoTercerMensual = leyes.decimoTercerMes ? salarioMensual / 12 : 0;
+  const vacacionesMensual = (salarioMensual / 12) * (leyes.vacacionesDias / 30);
+  const costoMensualEmpleador = salarioMensual + cssPatron + segEduPatron + decimoTercerMensual + vacacionesMensual;
+  const salMin = emp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2;
+  return { emp, salarioMensual, quincena, pagoHorasEx, pagoHorasExNoc, bonos, descAusencias, pagoDiasLibres, diasLibres, otrosDeduc, descPrestamo, prestEmpleado, netoEmpleado, cssPatron, segEduPatron, decimoTercerMensual, vacacionesMensual, costoMensualEmpleador, salMin, bajoMinimo: salarioMensual < salMin };
+}
+
+function calcularLiquidacion(emp, leyes, motivo, fechaSalida) {
+  const salarioMensual = parseFloat(emp.salario) || 0;
+  const valorDia = salarioMensual / 30;
+  const fechaEntrada = emp.fechaIngreso ? new Date(emp.fechaIngreso) : null;
+  const fechaSalidaDate = fechaSalida ? new Date(fechaSalida) : new Date();
+  let anosCompletos = 0, mesesExtra = 0, diasExtra = 0;
+  if (fechaEntrada) {
+    anosCompletos = fechaSalidaDate.getFullYear() - fechaEntrada.getFullYear();
+    mesesExtra = fechaSalidaDate.getMonth() - fechaEntrada.getMonth();
+    diasExtra = fechaSalidaDate.getDate() - fechaEntrada.getDate();
+    if (diasExtra < 0) { mesesExtra--; diasExtra += 30; }
+    if (mesesExtra < 0) { anosCompletos--; mesesExtra += 12; }
+  }
+  const totalMeses = anosCompletos * 12 + mesesExtra;
+  const mesesDesdeAniversario = mesesExtra + (diasExtra >= 15 ? 1 : 0);
+  const vacProporcionales = (salarioMensual / 12) * mesesDesdeAniversario;
+  const mesActual = fechaSalidaDate.getMonth();
+  const pagosMes = [3, 7, 11];
+  let mesUltimoPago = pagosMes.filter(m => m < mesActual).pop() ?? 11;
+  let mesesDesdeDecimo = mesActual - mesUltimoPago;
+  if (mesesDesdeDecimo <= 0) mesesDesdeDecimo = 4;
+  const decimoProporcional = (salarioMensual / 12) * Math.min(mesesDesdeDecimo, 4);
+  const diaDelMes = fechaSalidaDate.getDate();
+  const diasTrabajadosPeriodo = diaDelMes <= 15 ? diaDelMes : diaDelMes - 15;
+  const pagoDiasTrabajados = diasTrabajadosPeriodo * valorDia;
+  let indemnizacion = 0, primaAntigüedad = 0, preaviso = 0;
+  const salarioSemanal = salarioMensual / 4.3333;
+  if (motivo === "despido_injustificado") {
+    let aniosParaCalculo = anosCompletos;
+    if (mesesExtra >= 6) aniosParaCalculo++;
+    indemnizacion = Math.min(aniosParaCalculo * salarioMensual, 3 * salarioMensual);
+    if (totalMeses >= 12) primaAntigüedad = salarioSemanal * 1.92 * (anosCompletos + (mesesExtra >= 6 ? 0.5 : mesesExtra / 12));
+    preaviso = totalMeses < 24 ? salarioSemanal : salarioSemanal * 2;
+  } else if (motivo === "mutuo_acuerdo" || motivo === "despido_justificado") {
+    if (totalMeses >= 12) primaAntigüedad = salarioSemanal * 1.92 * (anosCompletos + mesesExtra / 12);
+  }
+  const totalLiquidacion = pagoDiasTrabajados + vacProporcionales + decimoProporcional + primaAntigüedad + indemnizacion + preaviso;
+  return { emp, motivo, fechaSalida: fechaSalidaDate.toLocaleDateString("es-PA"), salarioMensual, valorDia, anosCompletos, mesesExtra, diasExtra, totalMeses, pagoDiasTrabajados, diasTrabajadosPeriodo, vacProporcionales, mesesDesdeAniversario, decimoProporcional, mesesDesdeDecimo, primaAntigüedad, indemnizacion, preaviso, totalLiquidacion };
+}
+
+// ─── COLORES ──────────────────────────────────────────────────────────────────
+const C = { bg: "#f0f6f2", card: "#ffffff", dark: "#0f2419", accent: "#2e7d55", accentLight: "#e8f5ee", border: "#cce0d5", muted: "#6a9279", warn: "#c0392b", gold: "#b5860d" };
+
+function Btn({ children, onClick, variant = "primary", small, disabled, style: sx }) {
+  const styles = { primary: { background: C.dark, color: "#e8f5ee" }, accent: { background: C.accent, color: "#fff" }, outline: { background: "transparent", color: C.accent, border: `1.5px solid ${C.accent}` }, danger: { background: "transparent", color: C.warn, border: `1.5px solid ${C.warn}` }, ghost: { background: "transparent", color: C.muted, border: `1px solid ${C.border}` } };
+  return <button disabled={disabled} onClick={onClick} style={{ fontFamily: "monospace", fontWeight: 600, fontSize: small ? 10 : 12, letterSpacing: "0.07em", padding: small ? "5px 12px" : "9px 18px", borderRadius: 5, border: "none", cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, transition: "all 0.15s", whiteSpace: "nowrap", ...styles[variant], ...sx }}>{children}</button>;
+}
+
+function Inp({ label, hint, warn, children }) {
+  return <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+    {label && <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.accent, fontFamily: "monospace" }}>{label}</label>}
+    {children}
+    {hint && !warn && <span style={{ fontSize: 10, color: C.muted, fontFamily: "monospace" }}>{hint}</span>}
+    {warn && <span style={{ fontSize: 10, color: C.warn, fontFamily: "monospace" }}>⚠ {warn}</span>}
+  </div>;
+}
+
+function inp(value, onChange, opts = {}) {
+  return <input value={value} onChange={e => onChange(e.target.value)} {...opts} style={{ padding: "8px 12px", border: `1.5px solid ${C.border}`, borderRadius: 5, fontSize: 13, fontFamily: "monospace", background: "#f8fcfa", color: C.dark, width: "100%", boxSizing: "border-box", outline: "none" }} />;
+}
+
+function sel(value, onChange, options) {
+  return <select value={value} onChange={e => onChange(e.target.value)} style={{ padding: "8px 12px", border: `1.5px solid ${C.border}`, borderRadius: 5, fontSize: 13, fontFamily: "monospace", background: "#f8fcfa", color: C.dark, width: "100%", boxSizing: "border-box" }}>{options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>;
+}
+
+function Card({ children, style: sx }) {
+  return <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "20px 24px", marginBottom: 14, ...sx }}>{children}</div>;
+}
+
+function SectionTitle({ children, color }) {
+  return <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: color || C.accent, marginBottom: 14, fontFamily: "monospace" }}>{children}</div>;
+}
+
+function LineRow({ label, value, color, bold, sub }) {
+  return <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px dashed ${C.border}`, fontFamily: "monospace", fontSize: 13 }}>
+    <span style={{ color: sub ? C.muted : C.dark, fontWeight: bold ? 700 : 400, paddingLeft: sub ? 12 : 0 }}>{label}</span>
+    <span style={{ fontWeight: bold ? 700 : 400, color: color || C.dark }}>{value}</span>
+  </div>;
+}
+
+// ─── FERIADOS OFICIALES PANAMÁ (Art. 49 CT — recargo 150%) ───────────────────
+const FERIADOS_PANAMA = [
+  { mes: 1,  dia: 1,  nombre: "Año Nuevo" },
+  { mes: 1,  dia: 9,  nombre: "Día de los Mártires" },
+  { mes: 3,  dia: 3,  nombre: "Carnaval (Lunes)" },
+  { mes: 3,  dia: 4,  nombre: "Carnaval (Martes)" },
+  { mes: 4,  dia: 18, nombre: "Viernes Santo" },
+  { mes: 5,  dia: 1,  nombre: "Día del Trabajo" },
+  { mes: 11, dia: 3,  nombre: "Separación de Colombia" },
+  { mes: 11, dia: 5,  nombre: "Consolidación de la Separación (Colón)" },
+  { mes: 11, dia: 10, nombre: "Grito de Independencia (Los Santos)" },
+  { mes: 11, dia: 28, nombre: "Independencia de España" },
+  { mes: 12, dia: 8,  nombre: "Día de las Madres" },
+  { mes: 12, dia: 25, nombre: "Navidad" },
+];
+
+function feriadosDelMes(mes, quincena) {
+  const idx = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"].indexOf(mes) + 1;
+  return FERIADOS_PANAMA.filter(f => {
+    if (f.mes !== idx) return false;
+    if (quincena === "1") return f.dia <= 15;
+    if (quincena === "2") return f.dia >= 16;
+    return true;
+  });
+}
+
+
+
+// ─── AUTH SCREENS ─────────────────────────────────────────────────────────────
+function AuthScreen({ onAuth }) {
+  const [modo, setModo] = useState("login");
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
+  const [showPass, setShowPass] = useState(false);
+
+  const login = async () => {
+    setLoading(true); setError("");
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    if (error) setError(error.message === "Invalid login credentials" ? "Correo o contraseña incorrectos." : error.message);
+    setLoading(false);
+  };
+
+  const register = async () => {
+    if (!nombre.trim()) return setError("Ingresa tu nombre.");
+    if (pass.length < 6) return setError("La contraseña debe tener al menos 6 caracteres.");
+    setLoading(true); setError("");
+    const { error } = await supabase.auth.signUp({ email, password: pass, options: { data: { nombre } } });
+    if (error) setError(error.message);
+    else setMsg("¡Cuenta creada! Ya puedes entrar.");
+    setLoading(false);
+  };
+
+  const forgot = async () => {
+    if (!email.trim()) return setError("Ingresa tu correo primero.");
+    setLoading(true); setError("");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: "https://sincontador.app" });
+    if (error) setError(error.message);
+    else setMsg("Te enviamos un correo para restablecer tu contraseña.");
+    setLoading(false);
+  };
+
+  const cambiarModo = (m) => { setModo(m); setError(""); setMsg(""); };
+
+  const iStyle = {
+    width:"100%", padding:"12px 14px", border:"1.5px solid #e5e7eb",
+    borderRadius:10, fontSize:14, fontFamily:"'Inter',sans-serif",
+    color:"#111827", background:"#fafafa", outline:"none", boxSizing:"border-box",
+    marginBottom:0,
+  };
+
+  const titles = { login: "Bienvenido de vuelta 👋", register: "Crear cuenta ✨", forgot: "Restablecer contraseña" };
+  const subs = { login: "Ingresa a tu cuenta para continuar", register: "Regístrate gratis en 30 segundos", forgot: "Te enviamos un enlace a tu correo" };
+
+  return (
+    <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 20px", background:"#f0fdf4", fontFamily:"'Inter',sans-serif" }}>
+
+      {/* Badge */}
+      <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"#dcfce7", color:"#15803d", fontSize:11, fontWeight:600, letterSpacing:".06em", textTransform:"uppercase", padding:"5px 14px", borderRadius:20, marginBottom:20, border:"1px solid #bbf7d0" }}>
+        🇵🇦 Hecho para Panamá
+      </div>
+
+      {/* Logo */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:8 }}>
+        <div style={{ width:48, height:48, borderRadius:14, background:"linear-gradient(135deg,#16a34a,#0f2419)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, boxShadow:"0 4px 14px rgba(22,163,74,.35)" }}>🏡</div>
+        <div style={{ fontSize:30, fontWeight:800, color:"#0f2419", letterSpacing:"-.02em" }}>SinContador</div>
+      </div>
+      <p style={{ fontSize:14, color:"#6b7280", marginBottom:28, textAlign:"center" }}>Gestiona el salario de tus empleadas en segundos</p>
+
+      {/* Card */}
+      <div style={{ background:"#fff", borderRadius:20, padding:"32px 28px", width:"100%", maxWidth:390, boxShadow:"0 4px 6px rgba(0,0,0,.04),0 20px 40px rgba(0,0,0,.08)", border:"1px solid #e5e7eb" }}>
+        <div style={{ fontSize:20, fontWeight:700, color:"#111827", marginBottom:4 }}>{titles[modo]}</div>
+        <div style={{ fontSize:13, color:"#9ca3af", marginBottom:22 }}>{subs[modo]}</div>
+
+        {error && <div style={{ background:"#fff1f2", border:"1px solid #fecdd3", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#be123c", marginBottom:16, display:"flex", gap:8, alignItems:"center" }}>⚠ {error}</div>}
+        {msg && <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#15803d", marginBottom:16, display:"flex", gap:8, alignItems:"center" }}>✓ {msg}</div>}
+
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          {modo === "register" && (
+            <div>
+              <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:6 }}>Tu nombre</label>
+              <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Ej. María González" style={iStyle}/>
+            </div>
+          )}
+          <div>
+            <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:6 }}>Correo electrónico</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@correo.com" style={iStyle}/>
+          </div>
+          {modo !== "forgot" && (
+            <div>
+              <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:6 }}>Contraseña</label>
+              <div style={{ position:"relative" }}>
+                <input type={showPass?"text":"password"} value={pass} onChange={e=>setPass(e.target.value)}
+                  placeholder={modo==="register"?"Mínimo 6 caracteres":"••••••••"}
+                  onKeyDown={e=>e.key==="Enter"&&(modo==="login"?login():register())}
+                  style={{...iStyle, paddingRight:44}}/>
+                <button onClick={()=>setShowPass(!showPass)} style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:16, color:"#9ca3af" }}>
+                  {showPass?"🙈":"👁"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {modo === "login" && <div style={{ textAlign:"right", margin:"10px 0 18px" }}>
+          <span onClick={()=>cambiarModo("forgot")} style={{ fontSize:12, color:"#16a34a", fontWeight:600, cursor:"pointer" }}>¿Olvidaste tu contraseña?</span>
+        </div>}
+
+        <div style={{ marginTop: modo === "login" ? 0 : 20, display:"flex", flexDirection:"column", gap:10 }}>
+          {modo === "login" && <>
+            <button onClick={login} disabled={loading} style={{ width:"100%", padding:14, background:loading?"#6b7280":"linear-gradient(135deg,#16a34a,#0f2419)", color:"#fff", border:"none", borderRadius:10, fontSize:15, fontWeight:700, fontFamily:"'Inter',sans-serif", cursor:loading?"not-allowed":"pointer", boxShadow:"0 4px 14px rgba(22,163,74,.3)" }}>
+              {loading ? "⏳ Entrando..." : "Entrar →"}
+            </button>
+            <div style={{ display:"flex", alignItems:"center", gap:10, color:"#d1d5db", fontSize:12 }}>
+              <div style={{ flex:1, height:1, background:"#e5e7eb" }}/> o <div style={{ flex:1, height:1, background:"#e5e7eb" }}/>
+            </div>
+            <button onClick={()=>cambiarModo("register")} style={{ width:"100%", padding:13, background:"#f0fdf4", color:"#16a34a", border:"1.5px solid #d1fae5", borderRadius:10, fontSize:14, fontWeight:600, fontFamily:"'Inter',sans-serif", cursor:"pointer" }}>
+              ✨ Crear cuenta gratis
+            </button>
+          </>}
+
+          {modo === "register" && <>
+            <button onClick={register} disabled={loading} style={{ width:"100%", padding:14, background:loading?"#6b7280":"linear-gradient(135deg,#16a34a,#0f2419)", color:"#fff", border:"none", borderRadius:10, fontSize:15, fontWeight:700, fontFamily:"'Inter',sans-serif", cursor:loading?"not-allowed":"pointer", boxShadow:"0 4px 14px rgba(22,163,74,.3)" }}>
+              {loading ? "⏳ Creando..." : "✓ Crear mi cuenta"}
+            </button>
+            <button onClick={()=>cambiarModo("login")} style={{ width:"100%", padding:13, background:"#f0fdf4", color:"#16a34a", border:"1.5px solid #d1fae5", borderRadius:10, fontSize:14, fontWeight:600, fontFamily:"'Inter',sans-serif", cursor:"pointer" }}>
+              Ya tengo cuenta
+            </button>
+          </>}
+
+          {modo === "forgot" && <>
+            <button onClick={forgot} disabled={loading} style={{ width:"100%", padding:14, background:loading?"#6b7280":"linear-gradient(135deg,#16a34a,#0f2419)", color:"#fff", border:"none", borderRadius:10, fontSize:15, fontWeight:700, fontFamily:"'Inter',sans-serif", cursor:loading?"not-allowed":"pointer" }}>
+              {loading ? "⏳ Enviando..." : "📧 Enviar correo"}
+            </button>
+            <button onClick={()=>cambiarModo("login")} style={{ width:"100%", padding:13, background:"#f0fdf4", color:"#16a34a", border:"1.5px solid #d1fae5", borderRadius:10, fontSize:14, fontWeight:600, fontFamily:"'Inter',sans-serif", cursor:"pointer" }}>
+              ← Volver al login
+            </button>
+          </>}
+        </div>
+      </div>
+
+      {/* Trust row */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, marginTop:20, fontSize:11, color:"#9ca3af" }}>
+        <span>🔒 100% seguro</span>
+        <span>☁️ Datos en la nube</span>
+        <span>⚖️ Ley 462</span>
+      </div>
+
+      <div style={{ marginTop:16, fontSize:10, color:"#d1d5db", letterSpacing:".04em", textAlign:"center", lineHeight:1.8 }}>
+        DECRETO No.13 · CSS LEY 462 · CÓDIGO DE TRABAJO PANAMÁ
+      </div>
+    </div>
+  );
+}
+
+
+// ─── APP PRINCIPAL ─────────────────────────────────────────────────────────────
+function MainApp({ user, onLogout }) {
+  const [ready, setReady] = useState(false);
+  const [tab, setTab] = useState("dashboard");
+  const [leyes, setLeyes] = useState(LEYES_DEFAULT);
+  const [empleados, setEmpleados] = useState([]);
+  const [prestamos, setPrestamos] = useState([]);
+  const [historial, setHistorial] = useState([]);
+  const [vistaEmp, setVistaEmp] = useState("lista");
+  const [empActivo, setEmpActivo] = useState(null);
+  const [pagoData, setPagoData] = useState(null);
+  const [liquidacionData, setLiquidacionData] = useState(null);
+  const [formLiq, setFormLiq] = useState({ motivo: "despido_injustificado", fechaSalida: hoy() });
+  const empVacio = { id: null, nombre: "", puesto: "Empleada doméstica", region: "1", salario: "", fechaIngreso: "", horasExtra: "0", horasExtraNocturnas: "0", diasAusencia: "0", bonos: "0", otrosDeduc: "0", notas: "", foto: null };
+  const [formEmp, setFormEmp] = useState(empVacio);
+  const prestVacio = { id: null, empleadoId: "", monto: "", cuotaMensual: "", motivo: "", fecha: hoy(), saldo: "" };
+  const [formPrest, setFormPrest] = useState(prestVacio);
+  const [verPrest, setVerPrest] = useState(false);
+  const [reciboMes, setReciboMes] = useState(MESES[new Date().getMonth()]);
+  const [reciboAno, setReciboAno] = useState(String(new Date().getFullYear()));
+  const [quincenaNum, setQuincenaNum] = useState(new Date().getDate() <= 15 ? "1" : "2");
+  const [metodoPago, setMetodoPago] = useState("Transferencia bancaria");
+  const [notasPago, setNotasPago] = useState("");
+  const [correoDestino, setCorreoDestino] = useState("");
+  const [adjuntos, setAdjuntos] = useState([]);
+  const [diasLibresPago, setDiasLibresPago] = useState([]);
+  const fileRef = useRef();
+  const uid = user.id;
+  const nombreUsuario = user.user_metadata?.nombre || user.email?.split("@")[0] || "Usuario";
+
+  useEffect(() => {
+    (async () => {
+      const [e, l, h, p] = await Promise.all([load(KEYS.empleados, uid), load(KEYS.leyes, uid), load(KEYS.historial, uid), load(KEYS.prestamos, uid)]);
+      if (e) setEmpleados(e);
+      if (l) setLeyes(l);
+      if (h) setHistorial(h);
+      if (p) setPrestamos(p);
+      setReady(true);
+    })();
+  }, []);
+
+  useEffect(() => { if (ready) save(KEYS.empleados, empleados, uid); }, [empleados, ready]);
+  useEffect(() => { if (ready) save(KEYS.leyes, leyes, uid); }, [leyes, ready]);
+  useEffect(() => { if (ready) save(KEYS.historial, historial, uid); }, [historial, ready]);
+  useEffect(() => { if (ready) save(KEYS.prestamos, prestamos, uid); }, [prestamos, ready]);
+
+  const updLey = (k, v) => setLeyes(l => ({ ...l, [k]: v }));
+  const updEmp = (k, v) => setFormEmp(f => ({ ...f, [k]: v }));
+
+  const guardarEmp = () => {
+    if (!formEmp.nombre.trim()) return alert("Ingresa el nombre.");
+    if (formEmp.id) setEmpleados(e => e.map(x => x.id === formEmp.id ? formEmp : x));
+    else setEmpleados(e => [...e, { ...formEmp, id: Date.now() }]);
+    setVistaEmp("lista");
+  };
+
+  const eliminarEmp = (id) => {
+    if (!confirm("¿Eliminar este empleado?")) return;
+    setEmpleados(e => e.filter(x => x.id !== id));
+    setPrestamos(p => p.filter(x => x.empleadoId !== id));
+    setHistorial(h => h.filter(x => x.empId !== id));
+    setVistaEmp("lista");
+  };
+
+  const guardarPrest = () => {
+    const monto = parseFloat(formPrest.monto), cuota = parseFloat(formPrest.cuotaMensual);
+    const empId = formPrest.empleadoId || (empleados[0]?.id || "");
+    if (!empId || !monto || !cuota) return alert("Completa todos los campos.");
+    setPrestamos(p => [...p, { ...formPrest, empleadoId: empId, id: Date.now(), monto, cuotaMensual: cuota, saldo: monto }]);
+    setFormPrest(prestVacio); setVerPrest(false);
+  };
+
+  const abonarPrest = (id, abono) => setPrestamos(p => p.map(x => x.id === id ? { ...x, saldo: Math.max(0, x.saldo - abono) } : x));
+
+  const abrirPago = (emp) => {
+    setEmpActivo(emp); setDiasLibresPago([]);
+    setPagoData(calcularPago(emp, leyes, prestamos, []));
+    setAdjuntos([]); setNotasPago(""); setCorreoDestino(""); setVistaEmp("pago");
+  };
+
+  useEffect(() => {
+    if (empActivo && vistaEmp === "pago") setPagoData(calcularPago(empActivo, leyes, prestamos, diasLibresPago));
+  }, [diasLibresPago]);
+
+  const registrarPago = () => {
+    if (!pagoData) return;
+    pagoData.prestEmpleado.forEach(p => abonarPrest(p.id, Math.min(p.cuotaMensual, p.saldo)));
+    const registro = { id: Date.now(), empId: empActivo.id, empNombre: empActivo.nombre, empPuesto: empActivo.puesto, mes: reciboMes, año: reciboAno, quincena: quincenaNum, metodoPago, notas: notasPago, correo: correoDestino, fecha: new Date().toLocaleDateString("es-PA"), ...pagoData, adjuntos: adjuntos.map(a => ({ nombre: a.nombre, data: a.data })), diasLibresPago };
+    setHistorial(h => [registro, ...h]);
+    setVistaEmp("lista");
+    alert(`✓ Pago registrado para ${empActivo.nombre}`);
+  };
+
+  const abrirLiquidacion = (emp) => {
+    setEmpActivo(emp);
+    setFormLiq({ motivo: "despido_injustificado", fechaSalida: hoy() });
+    setLiquidacionData(calcularLiquidacion(emp, leyes, "despido_injustificado", hoy()));
+    setVistaEmp("liquidacion");
+  };
+
+  const recalcLiq = (campo, valor) => {
+    const nf = { ...formLiq, [campo]: valor };
+    setFormLiq(nf);
+    setLiquidacionData(calcularLiquidacion(empActivo, leyes, nf.motivo, nf.fechaSalida));
+  };
+
+  const addDiaLibre = () => setDiasLibresPago(d => [...d, { id: Date.now(), fecha: hoy(), modo: "auto", recargo: "100", monto: "", descripcion: "" }]);
+  const updDiaLibre = (id, field, val) => setDiasLibresPago(d => d.map(x => x.id === id ? { ...x, [field]: val } : x));
+  const removeDiaLibre = (id) => setDiasLibresPago(d => d.filter(x => x.id !== id));
+
+  const adjuntarImagen = (e) => {
+    Array.from(e.target.files).forEach(f => {
+      const r = new FileReader();
+      r.onload = ev => setAdjuntos(a => [...a, { nombre: f.name, data: ev.target.result }]);
+      r.readAsDataURL(f);
+    });
+  };
+
+  const enviarCorreo = () => {
+    if (!correoDestino.trim()) return alert("Ingresa un correo.");
+    const p = pagoData, emp = p.emp;
+    const asunto = encodeURIComponent(`Recibo de Pago — ${emp.nombre} — Q${quincenaNum} ${reciboMes} ${reciboAno}`);
+    const cuerpo = encodeURIComponent(`Estimada ${emp.nombre},\n\nRecibo Q${quincenaNum} ${reciboMes} ${reciboAno}\n\nSalario mensual: ${fmt(p.salarioMensual)}\nBase quincena: ${fmt(p.quincena)}\nTOTAL: ${fmt(p.netoEmpleado)}\n\nMétodo: ${metodoPago}${notasPago ? `\n\nNotas: ${notasPago}` : ""}`);
+    window.location.href = `mailto:${correoDestino.trim()}?subject=${asunto}&body=${cuerpo}`;
+  };
+
+  const alertas = empleados.flatMap(emp => {
+    const a = [];
+    const vac = proximasVacaciones(emp.fechaIngreso, leyes.vacacionesDias);
+    if (vac && vac.diasRestantes <= 30) a.push({ tipo: "vac", emp, vac });
+    if (prestamos.filter(p => p.empleadoId === emp.id && p.saldo > 0).length > 0) a.push({ tipo: "prest", emp });
+    if (parseFloat(emp.salario) < (emp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2)) a.push({ tipo: "salmin", emp });
+    return a;
+  });
+
+  if (!ready) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: C.dark, color: "#5aab7a", fontFamily: "monospace", fontSize: 14 }}>Cargando datos...</div>;
+
+  return (
+    <div style={{ fontFamily: "'Courier New', monospace", minHeight: "100vh", background: C.bg, color: C.dark }}>
+      <style>{`
+        *{box-sizing:border-box;margin:0;padding:0}
+        input,select,textarea{transition:border .15s;font-family:monospace}
+        input:focus,select:focus,textarea:focus{border-color:${C.accent}!important;outline:none;box-shadow:0 0 0 2px ${C.accentLight}}
+        .tab{font-family:monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:10px 16px;background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap}
+        .tab.on{border-bottom-color:${C.accent};color:#e8f5ee}
+        .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+        @media(max-width:560px){.g2,.g3{grid-template-columns:1fr}}
+        .emp-row{background:#fff;border:1px solid ${C.border};border-radius:8px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+        .vac-bar{height:6px;border-radius:3px;background:${C.border};overflow:hidden;margin-top:4px}
+        .vac-bar-fill{height:100%;border-radius:3px;background:${C.accent}}
+      `}</style>
+
+      {/* HEADER */}
+      <div style={{ background: C.dark, color: "#e8f5ee" }}>
+        <div style={{ maxWidth: 780, margin: "0 auto", padding: "18px 16px 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div>
+              <div style={{ fontSize: 10, color: "#5aab7a", letterSpacing: ".2em" }}>SINCONTADOR · PANAMÁ</div>
+              <h1 style={{ fontSize: 22, fontWeight: 700, fontFamily: "Georgia,serif", marginTop: 2 }}>Casa & Personal</h1>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 11, color: "#5aab7a" }}>👤 {nombreUsuario}</span>
+              <button onClick={onLogout} style={{ fontSize: 10, fontFamily: "monospace", background: "#1e3d2a", color: "#5aab7a", border: "none", borderRadius: 4, padding: "4px 10px", cursor: "pointer" }}>Salir</button>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 2, overflowX: "auto" }}>
+            {[["dashboard","📊 Inicio"],["empleados","👥 Empleados"],["prestamos","💰 Préstamos"],["historial","📄 Historial"],["leyes","⚙ Reglas"]].map(([t, l]) => (
+              <button key={t} className={`tab${tab === t ? " on" : ""}`}
+                style={{ color: tab === t ? "#e8f5ee" : "#5aab7a", borderBottomColor: tab === t ? "#5aab7a" : "transparent" }}
+                onClick={() => { setTab(t); setVistaEmp("lista"); }}>{l}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px 80px" }}>
+
+        {/* DASHBOARD */}
+        {tab === "dashboard" && (
+          <div>
+            <div className="g3" style={{ marginBottom: 16 }}>
+              {[["Empleados", empleados.length, "👤"],["Gasto mensual", fmt(empleados.reduce((s,e) => s + calcularPago(e, leyes, prestamos, []).costoMensualEmpleador, 0)), "💵"],["Préstamos activos", prestamos.filter(p => p.saldo > 0).length, "🏦"]].map(([label,val,icon]) => (
+                <Card key={label} style={{ padding: "14px 18px", textAlign: "center" }}>
+                  <div style={{ fontSize: 22 }}>{icon}</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, margin: "4px 0", fontFamily: "Georgia,serif" }}>{val}</div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: ".08em" }}>{label}</div>
+                </Card>
+              ))}
+            </div>
+            {alertas.length > 0 && <Card>
+              <SectionTitle>⚠ Alertas</SectionTitle>
+              {alertas.map((a,i) => (
+                <div key={i} style={{ background: a.tipo==="vac"?"#fff8e1":a.tipo==="salmin"?"#fff0ef":C.accentLight, border: `1px solid ${a.tipo==="vac"?"#ffe082":a.tipo==="salmin"?"#ffccc7":C.border}`, borderRadius: 6, padding: "10px 14px", marginBottom: 8, fontSize: 12 }}>
+                  <strong>{a.emp.nombre}</strong>
+                  {a.tipo==="vac" && <span style={{ color: C.gold }}> · 🌴 Vacaciones en {a.vac.diasRestantes} días ({a.vac.fecha})</span>}
+                  {a.tipo==="salmin" && <span style={{ color: C.warn }}> · Salario bajo el mínimo legal</span>}
+                  {a.tipo==="prest" && <span style={{ color: C.accent }}> · Tiene préstamo(s) activo(s)</span>}
+                </div>
+              ))}
+            </Card>}
+            {empleados.length === 0 ? (
+              <Card style={{ textAlign: "center", padding: "50px 20px", color: C.muted }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🏡</div>
+                <div style={{ fontSize: 15, marginBottom: 20 }}>Bienvenido, {nombreUsuario}</div>
+                <Btn onClick={() => { setTab("empleados"); setFormEmp(empVacio); setVistaEmp("form"); }}>+ Agregar tu primer empleado</Btn>
+              </Card>
+            ) : (
+              <Card>
+                <SectionTitle>Empleados</SectionTitle>
+                {empleados.map(emp => {
+                  const p = calcularPago(emp, leyes, prestamos, []);
+                  const vac = proximasVacaciones(emp.fechaIngreso, leyes.vacacionesDias);
+                  return <div key={emp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px dashed ${C.border}`, gap: 10, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {emp.foto ? <img src={emp.foto} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>}
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{emp.nombre}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{emp.puesto} {vac ? `· 🌴 ${vac.diasRestantes}d` : ""}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontWeight: 700, color: C.accent }}>{fmt(p.netoEmpleado)}<span style={{ fontSize: 10, color: C.muted }}>/quincena</span></div>
+                      <div style={{ fontSize: 10, color: C.muted }}>Costo/mes: {fmt(p.costoMensualEmpleador)}</div>
+                    </div>
+                  </div>;
+                })}
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* EMPLEADOS LISTA */}
+        {tab === "empleados" && vistaEmp === "lista" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <span style={{ fontSize: 12, color: C.muted }}>{empleados.length} empleado{empleados.length !== 1 ? "s" : ""}</span>
+              <Btn onClick={() => { setFormEmp({ ...empVacio }); setVistaEmp("form"); }}>+ Nuevo</Btn>
+            </div>
+            {empleados.map(emp => {
+              const ant = antiguedad(emp.fechaIngreso);
+              const bajo = parseFloat(emp.salario) < (emp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2);
+              return <div key={emp.id} className="emp-row">
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+                  {emp.foto ? <img src={emp.foto} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>👤</div>}
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{emp.nombre} {bajo && <span style={{ fontSize: 9, background: "#ffeaea", color: C.warn, padding: "1px 6px", borderRadius: 10, fontWeight: 700 }}>⚠ bajo mínimo</span>}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{emp.puesto} · {fmt(parseFloat(emp.salario)||0)}/mes {emp.fechaIngreso && `· ${ant.texto}`}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  <Btn small variant="accent" onClick={() => abrirPago(emp)}>Pagar</Btn>
+                  <Btn small variant="outline" onClick={() => { setEmpActivo(emp); setVistaEmp("detalle"); }}>Ver</Btn>
+                  <Btn small variant="ghost" onClick={() => { setFormEmp(emp); setVistaEmp("form"); }}>Editar</Btn>
+                  <Btn small variant="danger" onClick={() => abrirLiquidacion(emp)}>Liquidar</Btn>
+                </div>
+              </div>;
+            })}
+          </div>
+        )}
+
+        {/* FORM EMPLEADO */}
+        {tab === "empleados" && vistaEmp === "form" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <Btn variant="ghost" small onClick={() => setVistaEmp("lista")}>← Volver</Btn>
+              <h2 style={{ fontSize: 18, fontFamily: "Georgia,serif" }}>{formEmp.id ? "Editar" : "Nuevo"} Empleado</h2>
+            </div>
+            <Card>
+              <SectionTitle>Foto</SectionTitle>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                {formEmp.foto ? <img src={formEmp.foto} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: 64, height: 64, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>👤</div>}
+                <div>
+                  <input type="file" accept="image/*" style={{ display: "none" }} id="fotoEmp" onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => updEmp("foto", ev.target.result); r.readAsDataURL(f); }} />
+                  <Btn small variant="outline" onClick={() => document.getElementById("fotoEmp").click()}>📷 Subir foto</Btn>
+                </div>
+              </div>
+            </Card>
+            <Card>
+              <SectionTitle>Información Personal</SectionTitle>
+              <div className="g2" style={{ marginBottom: 14 }}>
+                <Inp label="Nombre">{inp(formEmp.nombre, v => updEmp("nombre", v), { placeholder: "Ej. María González" })}</Inp>
+                <Inp label="Puesto">{sel(formEmp.puesto, v => updEmp("puesto", v), [["Empleada doméstica","Empleada doméstica"],["Cocinera","Cocinera"],["Niñera","Niñera"],["Jardinero","Jardinero"],["Chofer","Chofer"],["Otro","Otro"]])}</Inp>
+              </div>
+              <div className="g2">
+                <Inp label="Fecha de Ingreso">
+                  {inp(formEmp.fechaIngreso, v => updEmp("fechaIngreso", v), { type: "date" })}
+                  {formEmp.fechaIngreso && <span style={{ fontSize: 10, color: C.accent }}>{antiguedad(formEmp.fechaIngreso).texto}</span>}
+                </Inp>
+                <Inp label="Región">{sel(formEmp.region, v => updEmp("region", v), [["1","Región 1 — Ciudad de Panamá…"],["2","Región 2 — Resto del país"]])}</Inp>
+              </div>
+            </Card>
+            <Card>
+              <SectionTitle>Salario</SectionTitle>
+              <div className="g3" style={{ marginBottom: 14 }}>
+                <Inp label="Salario Base/mes (USD)" hint={`Mín: ${fmt(formEmp.region==="1"?leyes.salarioMinimoR1:leyes.salarioMinimoR2)}`} warn={formEmp.salario && parseFloat(formEmp.salario) < (formEmp.region==="1"?leyes.salarioMinimoR1:leyes.salarioMinimoR2) ? "Bajo mínimo legal" : null}>
+                  {inp(formEmp.salario, v => updEmp("salario", v), { type: "number", placeholder: "340.00", min: "0", step: "0.01" })}
+                </Inp>
+                <Inp label="Horas Extra">{inp(formEmp.horasExtra, v => updEmp("horasExtra", v), { type: "number", min: "0" })}</Inp>
+                <Inp label="Días Ausencia">{inp(formEmp.diasAusencia, v => updEmp("diasAusencia", v), { type: "number", min: "0" })}</Inp>
+              </div>
+              <div className="g2">
+                <Inp label="Bonos/Propinas">{inp(formEmp.bonos, v => updEmp("bonos", v), { type: "number", min: "0", step: "0.01" })}</Inp>
+                <Inp label="Otras Deducciones">{inp(formEmp.otrosDeduc, v => updEmp("otrosDeduc", v), { type: "number", min: "0", step: "0.01" })}</Inp>
+              </div>
+            </Card>
+            <Card>
+              <SectionTitle>Notas</SectionTitle>
+              <textarea value={formEmp.notas} onChange={e => updEmp("notas", e.target.value)} style={{ width: "100%", minHeight: 70, padding: "8px 12px", border: `1.5px solid ${C.border}`, borderRadius: 5, fontFamily: "monospace", fontSize: 13, background: "#f8fcfa", resize: "vertical" }} />
+            </Card>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div>{formEmp.id && <Btn variant="danger" onClick={() => eliminarEmp(formEmp.id)}>Eliminar</Btn>}</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <Btn variant="ghost" onClick={() => setVistaEmp("lista")}>Cancelar</Btn>
+                <Btn onClick={guardarEmp}>{formEmp.id ? "Actualizar" : "Guardar"}</Btn>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DETALLE */}
+        {tab === "empleados" && vistaEmp === "detalle" && empActivo && (() => {
+          const emp = empleados.find(e => e.id === empActivo.id) || empActivo;
+          const ant = antiguedad(emp.fechaIngreso);
+          const vac = proximasVacaciones(emp.fechaIngreso, leyes.vacacionesDias);
+          const pagos = historial.filter(h => h.empId === emp.id);
+          return <div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+              <Btn variant="ghost" small onClick={() => setVistaEmp("lista")}>← Volver</Btn>
+              <Btn small variant="ghost" onClick={() => { setFormEmp(emp); setVistaEmp("form"); }}>✏ Editar</Btn>
+              <Btn small variant="accent" onClick={() => abrirPago(emp)}>💵 Pagar</Btn>
+              <Btn small variant="danger" onClick={() => abrirLiquidacion(emp)}>📋 Liquidar</Btn>
+            </div>
+            <Card style={{ background: C.dark, color: "#e8f5ee", border: "none" }}>
+              <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+                {emp.foto ? <img src={emp.foto} style={{ width: 60, height: 60, borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: 60, height: 60, borderRadius: "50%", background: "#1e3d2a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>👤</div>}
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "Georgia,serif" }}>{emp.nombre}</div>
+                  <div style={{ color: "#5aab7a", fontSize: 12 }}>{emp.puesto} · Región {emp.region}</div>
+                  {emp.fechaIngreso && <div style={{ color: "#5aab7a", fontSize: 11 }}>Ingreso: {emp.fechaIngreso} · {ant.texto}</div>}
+                </div>
+                <div style={{ marginLeft: "auto", textAlign: "right" }}>
+                  <div style={{ fontSize: 10, color: "#5aab7a" }}>SALARIO BASE</div>
+                  <div style={{ fontSize: 24, fontWeight: 700, fontFamily: "Georgia,serif" }}>{fmt(parseFloat(emp.salario)||0)}</div>
+                </div>
+              </div>
+            </Card>
+            {vac && <Card style={{ background: vac.diasRestantes<=30?"#fff8e1":C.accentLight, border: `1px solid ${vac.diasRestantes<=30?"#ffe082":C.border}` }}>
+              <SectionTitle color={vac.diasRestantes<=30?C.gold:C.accent}>🌴 Vacaciones</SectionTitle>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <div><div style={{ fontWeight: 600 }}>Próximas: {vac.fecha}</div><div style={{ fontSize: 12, color: C.muted }}>En {vac.diasRestantes} días · {vac.aniosCumplidos} año(s) → {leyes.vacacionesDias} días</div></div>
+                <div style={{ textAlign: "right" }}><div style={{ fontSize: 11, color: C.muted }}>Pago total est.</div><div style={{ fontWeight: 700, color: C.accent }}>{fmt(((parseFloat(emp.salario)||0)/30)*leyes.vacacionesDias)}</div></div>
+              </div>
+            </Card>}
+            {pagos.length > 0 && <Card><SectionTitle>📄 Últimos Pagos</SectionTitle>{pagos.slice(0,5).map(h => <div key={h.id} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px dashed ${C.border}`, fontSize: 13 }}><span>Q{h.quincena} {h.mes} {h.año}</span><span style={{ fontWeight: 700 }}>{fmt(h.netoEmpleado)}</span></div>)}</Card>}
+            {emp.notas && <Card><SectionTitle>📝 Notas</SectionTitle><div style={{ fontSize: 13, color: C.muted }}>{emp.notas}</div></Card>}
+          </div>;
+        })()}
+
+        {/* PAGO */}
+        {tab === "empleados" && vistaEmp === "pago" && pagoData && (
+          <div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 20, justifyContent: "space-between", flexWrap: "wrap" }}>
+              <Btn variant="ghost" small onClick={() => setVistaEmp("lista")}>← Volver</Btn>
+              <Btn small variant="accent" onClick={registrarPago}>✓ Confirmar Pago</Btn>
+            </div>
+            <Card style={{ background: C.dark, color: "#e8f5ee", border: "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: "#5aab7a", letterSpacing: ".15em" }}>QUINCENA {quincenaNum}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "Georgia,serif", marginTop: 4 }}>{pagoData.emp.nombre}</div>
+                  {pagoData.emp.fechaIngreso && <div style={{ fontSize: 11, color: "#5aab7a" }}>{antiguedad(pagoData.emp.fechaIngreso).texto}</div>}
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 10, color: "#5aab7a" }}>RECIBE</div>
+                  <div style={{ fontSize: 34, fontWeight: 700, color: "#7dd9a8", fontFamily: "Georgia,serif" }}>{fmt(pagoData.netoEmpleado)}</div>
+                </div>
+              </div>
+            </Card>
+            <Card>
+              <SectionTitle>Datos del Recibo</SectionTitle>
+              <div className="g2" style={{ marginBottom: 12 }}>
+                <Inp label="Quincena">{sel(quincenaNum, setQuincenaNum, [["1","1ª (1–15)"],["2","2ª (16–fin)"]])}</Inp>
+                <Inp label="Mes">{sel(reciboMes, setReciboMes, MESES.map(m => [m, m]))}</Inp>
+              </div>
+              <div className="g2">
+                <Inp label="Año">{inp(reciboAno, setReciboAno, { type: "number" })}</Inp>
+                <Inp label="Método">{sel(metodoPago, setMetodoPago, [["Transferencia bancaria","Transferencia bancaria"],["Efectivo","Efectivo"],["Cheque","Cheque"],["Nequi/Yappy","Nequi/Yappy"]])}</Inp>
+              </div>
+            </Card>
+            <Card>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".15em", textTransform: "uppercase", color: C.accent }}>🇵🇦 Feriados y Días Libres Trabajados</div>
+                <Btn small variant="outline" onClick={addDiaLibre}>+ Día extra</Btn>
+              </div>
+
+              {/* Feriados del mes */}
+              {feriadosDelMes(reciboMes, quincenaNum).length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: C.muted, fontFamily: "monospace", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".08em" }}>
+                    Feriados oficiales de {reciboMes} · Art. 49 CT (recargo 150%)
+                  </div>
+                  {feriadosDelMes(reciboMes, quincenaNum).map(f => {
+                    const vd = (parseFloat(empActivo?.salario)||0)/30;
+                    const montoLegal = vd * 2.5; // 100% + 150% recargo
+                    const dKey = `feriado_${f.mes}_${f.dia}`;
+                    const existing = diasLibresPago.find(d => d.feriadoKey === dKey);
+                    const trabajado = !!existing;
+                    return (
+                      <div key={dKey} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, marginBottom: 6, background: trabajado ? "#f0fdf4" : "#fafafa", border: `1.5px solid ${trabajado ? "#86efac" : C.border}`, transition: "all .15s" }}>
+                        {/* Checkbox */}
+                        <div onClick={() => {
+                          if (trabajado) {
+                            setDiasLibresPago(d => d.filter(x => x.feriadoKey !== dKey));
+                          } else {
+                            setDiasLibresPago(d => [...d, { id: Date.now(), feriadoKey: dKey, fecha: `${reciboAno}-${String(f.mes).padStart(2,"0")}-${String(f.dia).padStart(2,"0")}`, modo: "auto", recargo: "150", monto: "", descripcion: f.nombre }]);
+                          }
+                        }} style={{ width: 22, height: 22, borderRadius: 6, border: `2px solid ${trabajado?"#16a34a":C.border}`, background: trabajado?"#16a34a":"#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: 13 }}>
+                          {trabajado && <span style={{ color: "#fff" }}>✓</span>}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: C.dark }}>{f.dia} de {reciboMes} — {f.nombre}</div>
+                          <div style={{ fontSize: 11, color: C.muted }}>{trabajado ? `A pagar: ${fmt(montoLegal)} (150% recargo)` : "No trabajado — toca para marcar"}</div>
+                        </div>
+                        {trabajado && existing && (
+                          <div style={{ display: "flex", gap: 4 }}>
+                            {[["150","Legal"],["fijo","Fijo"]].map(([v,l]) => (
+                              <button key={v} onClick={() => {
+                                if (v === "fijo") updDiaLibre(existing.id, "modo", "fijo");
+                                else { updDiaLibre(existing.id, "modo", "auto"); updDiaLibre(existing.id, "recargo", "150"); }
+                              }} style={{ padding: "3px 8px", fontSize: 10, fontFamily: "monospace", fontWeight: 600, border: `1px solid ${(existing.modo==="auto"&&v==="150")||(existing.modo==="fijo"&&v==="fijo")?C.accent:C.border}`, borderRadius: 4, background: (existing.modo==="auto"&&v==="150")||(existing.modo==="fijo"&&v==="fijo")?C.accentLight:"#fff", cursor: "pointer", color: C.dark }}>
+                                {l}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {trabajado && existing && existing.modo === "fijo" && (
+                          <div style={{ width: 90 }}>
+                            {inp(existing.monto, v => updDiaLibre(existing.id,"monto",v), { type: "number", placeholder: "0.00", min: "0", step: "0.01" })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Días extra (domingos u otros) */}
+              {diasLibresPago.filter(d => !d.feriadoKey).length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: C.muted, fontFamily: "monospace", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".08em" }}>Otros días libres trabajados</div>
+                  {diasLibresPago.filter(d => !d.feriadoKey).map((d, i) => {
+                    const vd = (parseFloat(empActivo?.salario)||0)/30;
+                    const montoAuto = vd * (1 + (parseFloat(d.recargo)||100)/100);
+                    return <div key={d.id} style={{ background: "#f8fcfa", border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px", marginBottom: 8 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600 }}>Día extra #{i+1}</span>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <span style={{ fontWeight: 700, color: C.accent, fontSize: 13 }}>{d.modo==="fijo"?fmt(parseFloat(d.monto)||0):fmt(montoAuto)}</span>
+                          <button onClick={() => removeDiaLibre(d.id)} style={{ background: "none", border: "none", color: C.warn, fontSize: 18, cursor: "pointer" }}>×</button>
+                        </div>
+                      </div>
+                      <div className="g2" style={{ marginBottom: 8 }}>
+                        <Inp label="Fecha">{inp(d.fecha, v => updDiaLibre(d.id,"fecha",v), { type: "date" })}</Inp>
+                        <Inp label="Descripción">{inp(d.descripcion, v => updDiaLibre(d.id,"descripcion",v), { placeholder: "Ej. Domingo" })}</Inp>
+                      </div>
+                      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                        {[["auto","🔢 Calcular"],["fijo","✏ Fijo"]].map(([v,l]) => <button key={v} onClick={() => updDiaLibre(d.id,"modo",v)} style={{ padding: "5px 12px", fontSize: 11, fontFamily: "monospace", fontWeight: 600, border: "none", cursor: "pointer", background: d.modo===v?C.dark:"#f0f0f0", color: d.modo===v?"#e8f5ee":C.muted, borderRadius: 4 }}>{l}</button>)}
+                      </div>
+                      {d.modo==="auto" ? (
+                        <Inp label={`Recargo % · día normal: ${fmt(vd)}`}>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            {inp(d.recargo, v => updDiaLibre(d.id,"recargo",v), { type: "number", min: "0", style: { width: 80 } })}
+                            {[["150","Feriado (150%)"],["100","Doble (100%)"],["50","×1.5"]].map(([r,l]) => <button key={r} onClick={() => updDiaLibre(d.id,"recargo",r)} style={{ padding: "4px 8px", fontSize: 10, fontFamily: "monospace", border: `1px solid ${d.recargo===r?C.accent:C.border}`, borderRadius: 4, background: d.recargo===r?C.accentLight:"#fff", cursor: "pointer", whiteSpace: "nowrap" }}>{l}</button>)}
+                          </div>
+                        </Inp>
+                      ) : <Inp label="Monto (USD)">{inp(d.monto, v => updDiaLibre(d.id,"monto",v), { type: "number", min: "0", step: "0.01" })}</Inp>}
+                    </div>;
+                  })}
+                </div>
+              )}
+
+              {diasLibresPago.length === 0 && feriadosDelMes(reciboMes, quincenaNum).length === 0 && (
+                <div style={{ fontSize: 12, color: C.muted, textAlign: "center", padding: "8px 0" }}>No hay feriados en {reciboMes}. Usa "+ Día extra" si trabajó un domingo.</div>
+              )}
+              {diasLibresPago.length === 0 && feriadosDelMes(reciboMes, quincenaNum).length > 0 && (
+                <div style={{ fontSize: 11, color: C.muted, textAlign: "center", padding: "4px 0" }}>Toca el círculo para marcar los feriados que trabajó.</div>
+              )}
+              {pagoData?.pagoDiasLibres > 0 && (
+                <div style={{ display: "flex", justifyContent: "flex-end", fontSize: 13, fontWeight: 700, color: C.accent, fontFamily: "monospace", paddingTop: 8, borderTop: `1px dashed ${C.border}`, marginTop: 4 }}>
+                  Total días libres: {fmt(pagoData.pagoDiasLibres)}
+                </div>
+              )}
+            </Card>
+            <Card>
+              <SectionTitle color="#2d6e54">💵 Desglose</SectionTitle>
+              <LineRow label="Salario mensual" value={fmt(pagoData.salarioMensual)} />
+              <LineRow sub label="Base quincena (÷ 2)" value={fmt(pagoData.quincena)} bold />
+              {pagoData.pagoHorasEx > 0 && <LineRow sub label={`Horas Extra (+${leyes.horasExtraRecargo}%)`} value={`+ ${fmt(pagoData.pagoHorasEx)}`} color="#2d6e54" />}
+              {pagoData.bonos > 0 && <LineRow sub label="Bonos" value={`+ ${fmt(pagoData.bonos)}`} color="#2d6e54" />}
+              {pagoData.pagoDiasLibres > 0 && <LineRow sub label={`Días libres (${pagoData.diasLibres.length})`} value={`+ ${fmt(pagoData.pagoDiasLibres)}`} color="#2d6e54" />}
+              {pagoData.descAusencias > 0 && <LineRow sub label="Ausencias" value={`− ${fmt(pagoData.descAusencias)}`} color={C.warn} />}
+              {pagoData.descPrestamo > 0 && <LineRow sub label="Préstamo" value={`− ${fmt(pagoData.descPrestamo)}`} color={C.warn} />}
+            </Card>
+            <Card style={{ background: "#f0f9f4" }}>
+              <SectionTitle color="#1a4a6a">ℹ️ Aportes Patronales (tu costo aparte)</SectionTitle>
+              <LineRow sub label={`CSS (${leyes.cssEmpleador}%)`} value={fmt(pagoData.cssPatron)} />
+              <LineRow sub label={`Seg. Educativo (${leyes.segEduEmpleador}%)`} value={fmt(pagoData.segEduPatron)} />
+              {leyes.decimoTercerMes && <LineRow sub label="Décimo Tercer Mes" value={fmt(pagoData.decimoTercerMensual)} />}
+              <LineRow sub label="Vacaciones (provisión)" value={fmt(pagoData.vacacionesMensual)} />
+              <LineRow bold label="Costo mensual total" value={fmt(pagoData.costoMensualEmpleador)} />
+            </Card>
+            <Card>
+              <SectionTitle>📎 Comprobantes</SectionTitle>
+              <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={adjuntarImagen} />
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: adjuntos.length>0?12:0 }}>
+                {adjuntos.map((a,i) => <div key={i} style={{ position: "relative" }}>
+                  <img src={a.data} style={{ width: 72, height: 72, objectFit: "cover", borderRadius: 6, border: `1px solid ${C.border}` }} />
+                  <button onClick={() => setAdjuntos(x => x.filter((_,j)=>j!==i))} style={{ position: "absolute", top: -4, right: -4, width: 18, height: 18, borderRadius: "50%", background: C.warn, color: "#fff", border: "none", fontSize: 10, cursor: "pointer" }}>✕</button>
+                </div>)}
+              </div>
+              <Btn small variant="outline" onClick={() => fileRef.current.click()}>+ Adjuntar imagen</Btn>
+            </Card>
+            <Card>
+              <SectionTitle>✉️ Enviar por Correo</SectionTitle>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 200 }}><Inp label="Correo de la empleada">{inp(correoDestino, setCorreoDestino, { type: "email", placeholder: "ejemplo@correo.com" })}</Inp></div>
+                <Btn variant="outline" onClick={enviarCorreo} disabled={!correoDestino.trim()} style={{ alignSelf: "flex-end" }}>📧 Abrir correo</Btn>
+              </div>
+            </Card>
+            <Card>
+              <SectionTitle>📝 Notas</SectionTitle>
+              <textarea value={notasPago} onChange={e => setNotasPago(e.target.value)} placeholder="Observaciones..." style={{ width: "100%", minHeight: 60, padding: "8px 12px", border: `1.5px solid ${C.border}`, borderRadius: 5, fontFamily: "monospace", fontSize: 13, background: "#f8fcfa", resize: "vertical" }} />
+            </Card>
+            <div style={{ background: C.dark, borderRadius: 8, padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 10, color: "#5aab7a" }}>RECIBE LA EMPLEADA — Q{quincenaNum}</div>
+                <div style={{ fontSize: 32, color: "#7dd9a8", fontWeight: 700, fontFamily: "Georgia,serif" }}>{fmt(pagoData.netoEmpleado)}</div>
+                <div style={{ fontSize: 11, color: "#5aab7a" }}>Sin descuentos — CSS lo paga el empleador</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 10, color: "#5aab7a" }}>COSTO MENSUAL</div>
+                <div style={{ fontSize: 20, color: "#e8f5ee", fontWeight: 700 }}>{fmt(pagoData.costoMensualEmpleador)}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LIQUIDACIÓN */}
+        {tab === "empleados" && vistaEmp === "liquidacion" && liquidacionData && empActivo && (() => {
+          const liq = liquidacionData;
+          const MOTIVOS = [["despido_injustificado","🔴 Despido sin causa","Genera indemnización (Art. 231 CT)"],["despido_justificado","⚠️ Despido con causa","Sin indemnización"],["renuncia_voluntaria","🚪 Renuncia voluntaria","Sin indemnización ni prima"],["mutuo_acuerdo","🤝 Mutuo acuerdo","Prima de antigüedad aplica"]];
+          return <div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 20, justifyContent: "space-between" }}>
+              <Btn variant="ghost" small onClick={() => setVistaEmp("lista")}>← Volver</Btn>
+              <Btn small variant="danger" onClick={() => alert(`Liquidación total: ${fmt(liq.totalLiquidacion)}`)}>✓ Confirmar</Btn>
+            </div>
+            <div style={{ background: "#3d0f0f", color: "#ffeaea", borderRadius: 8, padding: "20px 24px", marginBottom: 14 }}>
+              <div style={{ fontSize: 10, color: "#ff9f7f", letterSpacing: ".2em", marginBottom: 4 }}>LIQUIDACIÓN · ART. 231 CT</div>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 22, fontWeight: 700, fontFamily: "Georgia,serif" }}>{liq.emp.nombre}</div>
+                  {liq.emp.fechaIngreso && <div style={{ color: "#ff9f7f", fontSize: 11 }}>Antigüedad: {liq.anosCompletos} año(s) {liq.mesesExtra} mes(es)</div>}
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 10, color: "#ff9f7f" }}>TOTAL</div>
+                  <div style={{ fontSize: 36, fontWeight: 700, color: "#ffcfc5", fontFamily: "Georgia,serif" }}>{fmt(liq.totalLiquidacion)}</div>
+                </div>
+              </div>
+            </div>
+            <Card>
+              <SectionTitle>Motivo</SectionTitle>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {MOTIVOS.map(([val,label,desc]) => <div key={val} onClick={() => recalcLiq("motivo",val)} style={{ padding: "10px 14px", borderRadius: 6, border: `2px solid ${formLiq.motivo===val?C.warn:C.border}`, background: formLiq.motivo===val?"#fff5f5":"#fafafa", cursor: "pointer" }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>{label}</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>{desc}</div>
+                </div>)}
+              </div>
+              <div style={{ marginTop: 14 }}><Inp label="Fecha de Salida">{inp(formLiq.fechaSalida, v => recalcLiq("fechaSalida",v), { type: "date" })}</Inp></div>
+            </Card>
+            <Card>
+              <SectionTitle color="#8b0000">📋 Desglose</SectionTitle>
+              <LineRow label={`Días trabajados (${liq.diasTrabajadosPeriodo}d × ${fmt(liq.valorDia)})`} value={fmt(liq.pagoDiasTrabajados)} />
+              <LineRow label={`Vacaciones proporcionales (${liq.mesesDesdeAniversario} mes${liq.mesesDesdeAniversario!==1?"es":""})`} value={fmt(liq.vacProporcionales)} />
+              <LineRow label={`Décimo proporcional (${liq.mesesDesdeDecimo} mes${liq.mesesDesdeDecimo!==1?"es":""})`} value={fmt(liq.decimoProporcional)} />
+              {liq.primaAntigüedad > 0 && <LineRow label="Prima de antigüedad" value={fmt(liq.primaAntigüedad)} color="#2d6e54" />}
+              {liq.preaviso > 0 && <LineRow label="Preaviso" value={fmt(liq.preaviso)} color={C.warn} />}
+              {liq.indemnizacion > 0 && <LineRow label={`Indemnización (${Math.min(liq.anosCompletos+(liq.mesesExtra>=6?1:0),3)} mes${Math.min(liq.anosCompletos+(liq.mesesExtra>=6?1:0),3)!==1?"es":""})`} value={fmt(liq.indemnizacion)} color={C.warn} />}
+              <div style={{ borderTop: `2px solid ${C.dark}`, paddingTop: 10, display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 16, fontFamily: "monospace", marginTop: 8 }}>
+                <span>TOTAL</span><span style={{ color: C.warn, fontSize: 22 }}>{fmt(liq.totalLiquidacion)}</span>
+              </div>
+            </Card>
+            <div style={{ background: "#fff8e1", border: "1px solid #ffe082", borderRadius: 6, padding: "12px 16px", fontSize: 11, color: "#6d5000", lineHeight: 1.7 }}>
+              ⚖️ Art. 230–231 CT · Despido sin causa: 1 mes/año (tope 3 meses) · Plazo: <strong>15 días hábiles</strong>
+            </div>
+          </div>;
+        })()}
+
+        {/* PRÉSTAMOS */}
+        {tab === "prestamos" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <span style={{ fontSize: 12, color: C.muted }}>{prestamos.filter(p=>p.saldo>0).length} préstamo(s) activo(s)</span>
+              <Btn onClick={() => { setFormPrest({ ...prestVacio, empleadoId: empleados[0]?.id||"" }); setVerPrest(true); }}>+ Nuevo</Btn>
+            </div>
+            {verPrest && <Card style={{ border: `2px solid ${C.accent}` }}>
+              <SectionTitle>Registrar Préstamo</SectionTitle>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 14 }}>
+                <Inp label="Empleado">{sel(formPrest.empleadoId, v => setFormPrest(f=>({...f,empleadoId:v})), empleados.map(e=>[e.id,e.nombre]))}</Inp>
+                <Inp label="Fecha">{inp(formPrest.fecha, v => setFormPrest(f=>({...f,fecha:v})), { type: "date" })}</Inp>
+                <Inp label="Monto Total (USD)">{inp(formPrest.monto, v => setFormPrest(f=>({...f,monto:v})), { type: "number", placeholder: "0.00", min: "0", step: "0.01" })}</Inp>
+                <Inp label="Cuota Mensual (USD)">{inp(formPrest.cuotaMensual, v => setFormPrest(f=>({...f,cuotaMensual:v})), { type: "number", placeholder: "0.00", min: "0", step: "0.01" })}</Inp>
+                {formPrest.monto && formPrest.cuotaMensual && (
+                  <div style={{ background: C.accentLight, border: `1px solid ${C.border}`, borderRadius: 5, padding: "8px 12px", fontSize: 12, color: C.accent, fontFamily: "monospace" }}>
+                    Se pagaría en aprox. {Math.ceil(parseFloat(formPrest.monto) / parseFloat(formPrest.cuotaMensual))} mes(es)
+                  </div>
+                )}
+                <Inp label="Motivo">{inp(formPrest.motivo, v => setFormPrest(f=>({...f,motivo:v})), { placeholder: "Ej. Emergencia médica" })}</Inp>
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <Btn variant="ghost" onClick={() => setVerPrest(false)}>Cancelar</Btn>
+                <Btn onClick={guardarPrest}>Guardar Préstamo</Btn>
+              </div>
+            </Card>}
+            {empleados.map(emp => {
+              const prs = prestamos.filter(p => p.empleadoId === emp.id);
+              if (!prs.length) return null;
+              return <Card key={emp.id}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  {emp.foto?<img src={emp.foto} style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "cover" }}/>:<span>👤</span>}
+                  <strong>{emp.nombre}</strong>
+                </div>
+                {prs.map(p => <div key={p.id} style={{ padding: "10px 0", borderTop: `1px dashed ${C.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+                    <div><div style={{ fontWeight: 600 }}>{p.motivo||"Préstamo"}</div><div style={{ fontSize: 11, color: C.muted }}>{p.fecha} · Cuota: {fmt(p.cuotaMensual)}/mes</div></div>
+                    <div style={{ textAlign: "right" }}><div style={{ fontWeight: 700, color: p.saldo>0?C.warn:C.accent }}>{p.saldo>0?`Saldo: ${fmt(p.saldo)}`:"✓ Pagado"}</div>{p.saldo>0&&<div style={{ fontSize: 11, color: C.muted }}>~{Math.ceil(p.saldo/p.cuotaMensual)} mes(es)</div>}</div>
+                  </div>
+                  {p.saldo>0&&<><div className="vac-bar" style={{ marginTop: 6 }}><div className="vac-bar-fill" style={{ width: `${Math.round((1-p.saldo/p.monto)*100)}%` }}/></div><div style={{ marginTop: 8 }}><Btn small variant="outline" onClick={() => abonarPrest(p.id, Math.min(p.cuotaMensual,p.saldo))}>Abonar {fmt(Math.min(p.cuotaMensual,p.saldo))}</Btn></div></>}
+                </div>)}
+              </Card>;
+            })}
+          </div>
+        )}
+
+        {/* HISTORIAL */}
+        {tab === "historial" && (
+          <div>
+            <div style={{ marginBottom: 12, fontSize: 12, color: C.muted }}>{historial.length} pago(s)</div>
+            {historial.length===0&&<div style={{ textAlign:"center", padding:"50px", color:C.muted }}><div style={{ fontSize:36, marginBottom:10 }}>📄</div>Sin pagos aún</div>}
+            {historial.map(h => <Card key={h.id}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{h.empNombre}</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>Q{h.quincena} · {h.mes} {h.año} · {h.metodoPago} · {h.fecha}</div>
+                  {h.notas&&<div style={{ fontSize: 11, color:C.muted, fontStyle:"italic" }}>{h.notas}</div>}
+                  {h.adjuntos?.length>0&&<div style={{ display:"flex", gap:6, marginTop:8 }}>{h.adjuntos.map((a,i)=><img key={i} src={a.data} style={{ width:44, height:44, objectFit:"cover", borderRadius:4, border:`1px solid ${C.border}`, cursor:"pointer" }} onClick={()=>window.open(a.data,"_blank")}/>)}</div>}
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontWeight:700, fontSize:18, color:C.accent }}>{fmt(h.netoEmpleado)}</div>
+                  <div style={{ fontSize:10, color:C.muted }}>Costo: {fmt(h.costoMensualEmpleador)}</div>
+                </div>
+              </div>
+            </Card>)}
+          </div>
+        )}
+
+        {/* LEYES */}
+        {tab === "leyes" && (
+          <div>
+            <div style={{ marginBottom: 14, padding: "10px 14px", background: "#fff8e1", border: "1px solid #ffe082", borderRadius: 6, fontSize: 12, color: "#6d5000" }}>
+              ✏ Edita cualquier valor. Se guarda automáticamente.
+            </div>
+            <Card>
+              <SectionTitle>Salario Mínimo · Decreto No. 13 (2025)</SectionTitle>
+              <div className="g2">
+                <Inp label="Región 1 (USD/mes)" hint="Vigente: $340.00">{inp(String(leyes.salarioMinimoR1), v => updLey("salarioMinimoR1", parseFloat(v)||0), { type:"number", step:"0.01" })}</Inp>
+                <Inp label="Región 2 (USD/mes)" hint="Vigente: $315.00">{inp(String(leyes.salarioMinimoR2), v => updLey("salarioMinimoR2", parseFloat(v)||0), { type:"number", step:"0.01" })}</Inp>
+              </div>
+            </Card>
+            <Card>
+              <SectionTitle>CSS · Ley 462 (2025)</SectionTitle>
+              <div className="g2">
+                <Inp label="Aporte Empleador %" hint="13.25% hasta feb 2027">{inp(String(leyes.cssEmpleador), v => updLey("cssEmpleador", parseFloat(v)||0), { type:"number", step:"0.01" })}</Inp>
+                <Inp label="Seguro Educativo Empleador %">{inp(String(leyes.segEduEmpleador), v => updLey("segEduEmpleador", parseFloat(v)||0), { type:"number", step:"0.01" })}</Inp>
+              </div>
+            </Card>
+            <Card>
+              <SectionTitle>Horas Extra · Beneficios</SectionTitle>
+              <div className="g3" style={{ marginBottom: 14 }}>
+                <Inp label="Horas jornada">{inp(String(leyes.horasJornadaDiurna), v => updLey("horasJornadaDiurna", parseFloat(v)||8), { type:"number" })}</Inp>
+                <Inp label="Extra diurna %" hint="25% = ×1.25">{inp(String(leyes.horasExtraRecargo), v => updLey("horasExtraRecargo", parseFloat(v)||0), { type:"number" })}</Inp>
+                <Inp label="Extra nocturna %">{inp(String(leyes.horasExtraNocturnas), v => updLey("horasExtraNocturnas", parseFloat(v)||0), { type:"number" })}</Inp>
+              </div>
+              <div className="g2">
+                <Inp label="Días vacaciones/año" hint="30 días (Art. 54 CT)">{inp(String(leyes.vacacionesDias), v => updLey("vacacionesDias", parseFloat(v)||30), { type:"number" })}</Inp>
+                <Inp label="Décimo Tercer Mes">{sel(leyes.decimoTercerMes?"si":"no", v => updLey("decimoTercerMes", v==="si"), [["si","Sí — Obligatorio"],["no","No incluir"]])}</Inp>
+              </div>
+            </Card>
+          </div>
+        )}
+
+      </div>
+      <div style={{ textAlign:"center", padding:"16px", fontSize:10, color:C.muted, letterSpacing:".1em" }}>
+        SINCONTADOR · DATOS EN LA NUBE · DECRETO No.13 · CSS LEY 462
+      </div>
+    </div>
+  );
+}
+
+// ─── ROOT ─────────────────────────────────────────────────────────────────────
+function Root() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
+  if (loading) return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100vh", background:"#0f2419", color:"#5aab7a", fontFamily:"monospace", fontSize:14 }}>Cargando...</div>;
+
+  if (!user) return <AuthScreen onAuth={setUser} />;
+
+  return <MainApp user={user} onLogout={logout} />;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+</script>
+</body>
+</html>
