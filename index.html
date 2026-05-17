@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="SinContador"/>
+<meta name="theme-color" content="#0f2419"/>
+<title>SinContador · Panamá</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#f0f6f2}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+
+
+// ─── STORAGE HELPERS ──────────────────────────────────────────────────────────
+const KEYS = { empleados: "emp_v1", leyes: "leyes_v1", historial: "hist_v1", prestamos: "prest_v1" };
+
+async function load(key) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+async function save(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) { console.error(e); }
+}
+
+// ─── LEYES PANAMÁ ─────────────────────────────────────────────────────────────
+const LEYES_DEFAULT = {
+  salarioMinimoR1: 340.00, salarioMinimoR2: 315.00,
+  cssEmpleador: 13.25, cssEmpleado: 9.75,
+  segEduEmpleador: 1.50, segEduEmpleado: 1.25,
+  horasExtraRecargo: 25, horasExtraNocturnas: 50,
+  vacacionesDias: 30, decimoTercerMes: true, horasJornadaDiurna: 8,
+};
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+const fmt = (n) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n || 0);
+const pct = (b, p) => (b * p) / 100;
+const hoy = () => new Date().toISOString().split("T")[0];
+
+function antiguedad(fechaIngreso) {
+  if (!fechaIngreso) return { años: 0, meses: 0, texto: "—", totalMeses: 0 };
+  const s = new Date(fechaIngreso), h = new Date();
+  let a = h.getFullYear() - s.getFullYear(), m = h.getMonth() - s.getMonth();
+  if (m < 0) { a--; m += 12; }
+  const total = a * 12 + m;
+  const texto = a > 0 ? `${a} año${a !== 1 ? "s" : ""} ${m} mes${m !== 1 ? "es" : ""}` : `${m} mes${m !== 1 ? "es" : ""}`;
+  return { años: a, meses: m, texto, totalMeses: total };
+}
+
+function proximasVacaciones(fechaIngreso, vacacionesDias) {
+  if (!fechaIngreso) return null;
+  const inicio = new Date(fechaIngreso);
+  const h = new Date();
+  const aniosCompletos = h.getFullYear() - inicio.getFullYear() + (h >= new Date(h.getFullYear(), inicio.getMonth(), inicio.getDate()) ? 0 : -1);
+  const proximoAniversario = new Date(inicio);
+  proximoAniversario.setFullYear(inicio.getFullYear() + aniosCompletos + 1);
+  const diasRestantes = Math.ceil((proximoAniversario - h) / 86400000);
+  return { fecha: proximoAniversario.toLocaleDateString("es-PA"), diasRestantes, aniosCumplidos: aniosCompletos + 1 };
+}
+
+// Para empleadas domésticas en Panamá:
+// - NO se les descuenta CSS ni Seguro Educativo (lo paga el empleador aparte)
+// - Se paga QUINCENALMENTE → salario mensual / 2 por quincena
+// - Solo se descuenta préstamos u otras deducciones acordadas
+function calcularPago(emp, leyes, prestamos, extraDias) {
+  const salarioMensual = parseFloat(emp.salario) || 0;
+  const quincena = salarioMensual / 2; // base de cada pago
+
+  const horasEx = parseFloat(emp.horasExtra) || 0;
+  const horasExNoc = parseFloat(emp.horasExtraNocturnas) || 0;
+  const diasAus = parseFloat(emp.diasAusencia) || 0;
+  const bonos = parseFloat(emp.bonos) || 0;
+  const otrosDeduc = parseFloat(emp.otrosDeduc) || 0;
+
+  const valorDia = salarioMensual / 30;
+  const valorHora = valorDia / leyes.horasJornadaDiurna;
+  const pagoHorasEx = horasEx * valorHora * (1 + leyes.horasExtraRecargo / 100);
+  const pagoHorasExNoc = horasExNoc * valorHora * (1 + leyes.horasExtraNocturnas / 100);
+  const descAusencias = diasAus * valorDia;
+
+  // Días libres trabajados
+  const diasLibres = extraDias || [];
+  const pagoDiasLibres = diasLibres.reduce((sum, d) => {
+    if (d.modo === "fijo") return sum + (parseFloat(d.monto) || 0);
+    return sum + valorDia * (1 + (parseFloat(d.recargo) || 100) / 100);
+  }, 0);
+
+  // Préstamos — solo descuento si el empleador lo acuerda, NO CSS ni SegEdu al empleado
+  const prestEmpleado = (prestamos || []).filter(p => p.empleadoId === emp.id && p.saldo > 0);
+  const descPrestamo = prestEmpleado.reduce((s, p) => s + Math.min(p.cuotaMensual, p.saldo), 0);
+
+  // Total a pagar esta quincena (base quincenal + extras de esta quincena)
+  const totalExtras = pagoHorasEx + pagoHorasExNoc + bonos + pagoDiasLibres;
+  const totalDescuentos = descAusencias + otrosDeduc + descPrestamo;
+
+  // Neto que recibe la empleada — SIN descuento de CSS ni SegEdu
+  const netoEmpleado = quincena + totalExtras - totalDescuentos;
+
+  // Lo que el empleador paga aparte a la CSS (no sale del bolsillo de la empleada)
+  const cssPatron = pct(salarioMensual, leyes.cssEmpleador);
+  const segEduPatron = pct(salarioMensual, leyes.segEduEmpleador);
+
+  // Provisiones mensuales que el empleador debe reservar
+  const decimoTercerMensual = leyes.decimoTercerMes ? salarioMensual / 12 : 0;
+  const vacacionesMensual = (salarioMensual / 12) * (leyes.vacacionesDias / 30);
+
+  // Costo real total del empleador por mes
+  const costoMensualEmpleador = salarioMensual + cssPatron + segEduPatron + decimoTercerMensual + vacacionesMensual;
+
+  const salMin = emp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2;
+
+  return {
+    emp, salarioMensual, quincena,
+    pagoHorasEx, pagoHorasExNoc, bonos, descAusencias,
+    pagoDiasLibres, diasLibres,
+    totalExtras, totalDescuentos,
+    otrosDeduc, descPrestamo, prestEmpleado,
+    netoEmpleado,
+    cssPatron, segEduPatron,
+    decimoTercerMensual, vacacionesMensual,
+    costoMensualEmpleador, salMin,
+    bajoMinimo: salarioMensual < salMin,
+  };
+}
+
+// ─── PDF GENERATOR (pure HTML/CSS print) ─────────────────────────────────────
+function generarPDF(pago, quincenaNum, mes, año, metodoPago, notas, imagenes) {
+  const imgs = imagenes.map(img => `<img src="${img.data}" style="max-width:180px;max-height:120px;border:1px solid #ddd;border-radius:4px;margin:4px;" />`).join("");
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <title>Recibo ${pago.emp.nombre} — ${quincenaNum}ª quincena ${mes} ${año}</title>
+  <style>
+    body{font-family:Georgia,serif;color:#1a3329;max-width:680px;margin:40px auto;padding:0 20px}
+    h1{font-size:22px;margin:0}
+    .header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a3329;padding-bottom:12px;margin-bottom:20px}
+    .sub{font-size:11px;color:#5a7a6a;letter-spacing:.1em;text-transform:uppercase}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    td{padding:6px 10px;font-size:13px;border-bottom:1px dashed #d4e8de}
+    td:last-child{text-align:right;font-weight:600}
+    .section-title{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#3d8f6e;padding:8px 0 4px}
+    .total-row td{font-size:15px;font-weight:700;border-bottom:2px solid #1a3329}
+    .neto-box{background:#1a3329;color:#fff;padding:16px 20px;border-radius:4px;display:flex;justify-content:space-between;align-items:center;margin-top:16px}
+    .info-box{background:#f0f9f4;border:1px solid #c8e6d4;border-radius:4px;padding:10px 14px;font-size:11px;color:#3d6e50;margin-top:12px}
+    .firma{margin-top:40px;display:flex;justify-content:space-between}
+    .firma-line{width:200px;border-top:1px solid #333;text-align:center;padding-top:6px;font-size:11px}
+    .imgs{margin-top:16px}
+    @media print{body{margin:10px}}
+  </style></head><body>
+  <div class="header">
+    <div>
+      <div class="sub">República de Panamá · Recibo de Pago Quincena ${quincenaNum}</div>
+      <h1>${pago.emp.nombre}</h1>
+      <div style="font-size:13px;color:#5a7a6a;margin-top:4px">${pago.emp.puesto} · Región ${pago.emp.region}</div>
+      ${pago.emp.fechaIngreso ? `<div style="font-size:12px;color:#5a7a6a">Ingreso: ${pago.emp.fechaIngreso} · ${antiguedad(pago.emp.fechaIngreso).texto}</div>` : ""}
+    </div>
+    <div style="text-align:right">
+      <div class="sub">Período</div>
+      <div style="font-size:16px;font-weight:700">${mes} ${año} · Q${quincenaNum}</div>
+      <div style="font-size:12px;color:#5a7a6a">Método: ${metodoPago}</div>
+      <div style="font-size:12px;color:#5a7a6a">Emitido: ${new Date().toLocaleDateString("es-PA")}</div>
+    </div>
+  </div>
+
+  <div class="section-title">Detalle del Pago</div>
+  <table>
+    <tr><td>Salario mensual base</td><td>${fmt(pago.salarioMensual)}</td></tr>
+    <tr><td>÷ 2 quincenas → Base de esta quincena</td><td>${fmt(pago.quincena)}</td></tr>
+    ${pago.pagoHorasEx > 0 ? `<tr><td>Horas Extra Diurnas</td><td>+ ${fmt(pago.pagoHorasEx)}</td></tr>` : ""}
+    ${pago.pagoHorasExNoc > 0 ? `<tr><td>Horas Extra Nocturnas</td><td>+ ${fmt(pago.pagoHorasExNoc)}</td></tr>` : ""}
+    ${pago.bonos > 0 ? `<tr><td>Bonos / Propinas</td><td>+ ${fmt(pago.bonos)}</td></tr>` : ""}
+    ${pago.pagoDiasLibres > 0 ? `<tr><td>Días Libres Trabajados (${(pago.diasLibres||[]).length} día${(pago.diasLibres||[]).length!==1?"s":""})</td><td>+ ${fmt(pago.pagoDiasLibres)}</td></tr>` : ""}
+    ${pago.descAusencias > 0 ? `<tr><td>Descuento Ausencias</td><td>− ${fmt(pago.descAusencias)}</td></tr>` : ""}
+    ${pago.descPrestamo > 0 ? `<tr><td>Descuento Préstamo</td><td>− ${fmt(pago.descPrestamo)}</td></tr>` : ""}
+    ${pago.otrosDeduc > 0 ? `<tr><td>Otras Deducciones</td><td>− ${fmt(pago.otrosDeduc)}</td></tr>` : ""}
+    <tr class="total-row"><td>TOTAL A PAGAR</td><td>${fmt(pago.netoEmpleado)}</td></tr>
+  </table>
+
+  <div class="neto-box">
+    <div><div style="font-size:10px;opacity:.7;letter-spacing:.1em">RECIBE LA EMPLEADA</div><div style="font-size:32px;font-weight:700">${fmt(pago.netoEmpleado)}</div></div>
+    <div style="text-align:right"><div style="font-size:10px;opacity:.7;letter-spacing:.1em">SALARIO MENSUAL BASE</div><div style="font-size:20px;font-weight:700">${fmt(pago.salarioMensual)}</div></div>
+  </div>
+
+  <div class="info-box">
+    ℹ️ La CSS (${pago.cssPatron?.toFixed(2)}%) y el Seguro Educativo (${pago.segEduPatron?.toFixed(2)}%) son pagados directamente por el empleador a la CSS — no se descuentan del salario de la empleada doméstica (Decreto Ejecutivo No. 13 / Ley 462 de 2025).
+  </div>
+
+  ${notas ? `<div style="margin-top:12px;padding:10px 14px;background:#f5faf7;border:1px solid #d4e8de;border-radius:4px;font-size:12px"><strong>Notas:</strong> ${notas}</div>` : ""}
+  ${imagenes.length > 0 ? `<div class="imgs"><div class="section-title">Comprobantes Adjuntos</div>${imgs}</div>` : ""}
+
+  <div class="firma">
+    <div class="firma-line">Firma Empleada</div>
+    <div class="firma-line">Firma Empleador/a</div>
+  </div>
+  <div style="margin-top:30px;font-size:10px;color:#8aab98;text-align:center">
+    Decreto Ejecutivo No. 13 (2025) · CSS Ley 462 · Código de Trabajo de Panamá · Art. 242 CT (pago quincenal)
+  </div>
+  </body></html>`;
+  const win = window.open("", "_blank");
+  win.document.write(html);
+  win.document.close();
+  setTimeout(() => win.print(), 400);
+}
+
+// ─── LIQUIDACIÓN Art. 231 Código de Trabajo — Trabajadores Domésticos ─────────
+// Régimen ESPECIAL doméstico (distinto al art. 225 general):
+// Indemnización por despido sin causa: 1 MES de salario por año (o fracción ≥ 6 meses), tope 3 meses
+// Renuncia voluntaria: NO hay indemnización ni prima de antigüedad
+// En ambos casos: vacaciones proporcionales + décimo tercer mes proporcional + días trabajados del período
+function calcularLiquidacion(emp, leyes, motivo, fechaSalida) {
+  const salarioMensual = parseFloat(emp.salario) || 0;
+  const valorDia = salarioMensual / 30;
+  const fechaEntrada = emp.fechaIngreso ? new Date(emp.fechaIngreso) : null;
+  const fechaSalidaDate = fechaSalida ? new Date(fechaSalida) : new Date();
+
+  // Antigüedad exacta en años y meses
+  let anosCompletos = 0, mesesExtra = 0, diasExtra = 0;
+  if (fechaEntrada) {
+    anosCompletos = fechaSalidaDate.getFullYear() - fechaEntrada.getFullYear();
+    mesesExtra = fechaSalidaDate.getMonth() - fechaEntrada.getMonth();
+    diasExtra = fechaSalidaDate.getDate() - fechaEntrada.getDate();
+    if (diasExtra < 0) { mesesExtra--; diasExtra += 30; }
+    if (mesesExtra < 0) { anosCompletos--; mesesExtra += 12; }
+  }
+  const totalMeses = anosCompletos * 12 + mesesExtra;
+
+  // ── VACACIONES PROPORCIONALES ──
+  // Meses trabajados desde el último aniversario
+  const mesesDesdeAniversario = mesesExtra + (diasExtra >= 15 ? 1 : 0);
+  const vacProporcionales = (salarioMensual / 12) * mesesDesdeAniversario;
+
+  // ── DÉCIMO TERCER MES PROPORCIONAL ──
+  // Último pago de décimo: abril, agosto o diciembre → calcular meses desde el último
+  const mesActual = fechaSalidaDate.getMonth(); // 0-11
+  const pagosMes = [3, 7, 11]; // abril=3, agosto=7, diciembre=11
+  let mesUltimoPago = pagosMes.filter(m => m < mesActual).pop() ?? 11;
+  if (mesUltimoPago > mesActual) mesUltimoPago = 11; // diciembre del año anterior
+  let mesesDesdeDecimo = mesActual - mesUltimoPago;
+  if (mesesDesdeDecimo <= 0) mesesDesdeDecimo = 4; // aprox. un cuatrimestre
+  const decimoProporcional = (salarioMensual / 12) * Math.min(mesesDesdeDecimo, 4);
+
+  // ── DÍAS TRABAJADOS DEL PERÍODO ACTUAL (quincena en curso) ──
+  const diaDelMes = fechaSalidaDate.getDate();
+  const diasTrabajadosPeriodo = diaDelMes <= 15 ? diaDelMes : diaDelMes - 15;
+  const pagoDiasTrabajados = diasTrabajadosPeriodo * valorDia;
+
+  // ── INDEMNIZACIÓN — solo en despido sin causa (Art. 231 CT domésticos) ──
+  // 1 mes por año trabajado (fracción ≥ 6 meses cuenta como año), tope 3 meses
+  let indemnizacion = 0;
+  let primaAntigüedad = 0;
+  let preaviso = 0;
+
+  if (motivo === "despido_injustificado") {
+    // Años completos + fracción ≥ 6 meses
+    let aniosParaCalculo = anosCompletos;
+    if (mesesExtra >= 6) aniosParaCalculo++;
+    indemnizacion = Math.min(aniosParaCalculo * salarioMensual, 3 * salarioMensual);
+
+    // Prima de antigüedad: aplica también en despido (Art. 229A)
+    // Primeros 10 años: 1.92 semanas/año. Simplificado: salario/4.333 * 1.92 * años
+    const salarioSemanal = salarioMensual / 4.3333;
+    if (totalMeses >= 12) {
+      primaAntigüedad = salarioSemanal * 1.92 * (anosCompletos + (mesesExtra >= 6 ? 0.5 : mesesExtra / 12));
+    }
+
+    // Preaviso: 1 semana si < 2 años, 2 semanas si ≥ 2 años (Art. 231)
+    preaviso = totalMeses < 24 ? salarioSemanal : salarioSemanal * 2;
+
+  } else if (motivo === "renuncia_voluntaria") {
+    // Sin indemnización, sin prima (renuncia sin causa justificada)
+    // Descuento: si no dio aviso de 15 días → se descuenta 1 semana (opcional, lo dejamos en $0)
+    indemnizacion = 0;
+    primaAntigüedad = 0;
+    preaviso = 0;
+
+  } else if (motivo === "mutuo_acuerdo") {
+    // Prima de antigüedad sí aplica
+    const salarioSemanal = salarioMensual / 4.3333;
+    if (totalMeses >= 12) {
+      primaAntigüedad = salarioSemanal * 1.92 * (anosCompletos + mesesExtra / 12);
+    }
+    indemnizacion = 0;
+    preaviso = 0;
+
+  } else if (motivo === "despido_justificado") {
+    // Sin indemnización, sin prima por indemnización, pero sí prima de antigüedad
+    const salarioSemanal = salarioMensual / 4.3333;
+    if (totalMeses >= 12) {
+      primaAntigüedad = salarioSemanal * 1.92 * (anosCompletos + mesesExtra / 12);
+    }
+    indemnizacion = 0;
+    preaviso = 0;
+  }
+
+  const totalLiquidacion = pagoDiasTrabajados + vacProporcionales + decimoProporcional + primaAntigüedad + indemnizacion + preaviso;
+
+  return {
+    emp, motivo, fechaSalida: fechaSalidaDate.toLocaleDateString("es-PA"),
+    salarioMensual, valorDia,
+    anosCompletos, mesesExtra, diasExtra, totalMeses,
+    pagoDiasTrabajados, diasTrabajadosPeriodo,
+    vacProporcionales, mesesDesdeAniversario,
+    decimoProporcional, mesesDesdeDecimo,
+    primaAntigüedad, indemnizacion, preaviso,
+    totalLiquidacion,
+  };
+}
+
+
+const C = {
+  bg: "#f0f6f2", card: "#ffffff", dark: "#0f2419", accent: "#2e7d55",
+  accentLight: "#e8f5ee", border: "#cce0d5", muted: "#6a9279", warn: "#c0392b",
+  gold: "#b5860d",
+};
+
+function Btn({ children, onClick, variant = "primary", small, disabled, style: sx }) {
+  const styles = {
+    primary: { background: C.dark, color: "#e8f5ee" },
+    accent: { background: C.accent, color: "#fff" },
+    outline: { background: "transparent", color: C.accent, border: `1.5px solid ${C.accent}` },
+    danger: { background: "transparent", color: C.warn, border: `1.5px solid ${C.warn}` },
+    ghost: { background: "transparent", color: C.muted, border: `1px solid ${C.border}` },
+  };
+  return (
+    <button disabled={disabled} onClick={onClick} style={{
+      fontFamily: "'DM Mono', monospace", fontWeight: 600, fontSize: small ? 10 : 12,
+      letterSpacing: "0.07em", padding: small ? "5px 12px" : "9px 18px",
+      borderRadius: 5, border: "none", cursor: disabled ? "not-allowed" : "pointer",
+      opacity: disabled ? 0.5 : 1, transition: "all 0.15s", whiteSpace: "nowrap",
+      ...styles[variant], ...sx
+    }}>{children}</button>
+  );
+}
+
+function Inp({ label, hint, warn, children }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      {label && <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.accent, fontFamily: "monospace" }}>{label}</label>}
+      {children}
+      {hint && !warn && <span style={{ fontSize: 10, color: C.muted, fontFamily: "monospace" }}>{hint}</span>}
+      {warn && <span style={{ fontSize: 10, color: C.warn, fontFamily: "monospace" }}>⚠ {warn}</span>}
+    </div>
+  );
+}
+
+function input(value, onChange, opts = {}) {
+  return <input value={value} onChange={e => onChange(e.target.value)} {...opts} style={{
+    padding: "8px 12px", border: `1.5px solid ${C.border}`, borderRadius: 5,
+    fontSize: 13, fontFamily: "monospace", background: "#f8fcfa", color: C.dark,
+    width: "100%", boxSizing: "border-box", outline: "none",
+  }} />;
+}
+
+function sel(value, onChange, options) {
+  return <select value={value} onChange={e => onChange(e.target.value)} style={{
+    padding: "8px 12px", border: `1.5px solid ${C.border}`, borderRadius: 5,
+    fontSize: 13, fontFamily: "monospace", background: "#f8fcfa", color: C.dark,
+    width: "100%", boxSizing: "border-box",
+  }}>{options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>;
+}
+
+function Card({ children, style: sx }) {
+  return <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "20px 24px", marginBottom: 14, ...sx }}>{children}</div>;
+}
+
+function SectionTitle({ children, color }) {
+  return <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: color || C.accent, marginBottom: 14, fontFamily: "monospace" }}>{children}</div>;
+}
+
+function LineRow({ label, value, color, bold, sub }) {
+  return <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px dashed ${C.border}`, fontFamily: "monospace", fontSize: 13 }}>
+    <span style={{ color: sub ? C.muted : C.dark, fontWeight: bold ? 700 : 400, paddingLeft: sub ? 12 : 0 }}>{label}</span>
+    <span style={{ fontWeight: bold ? 700 : 400, color: color || C.dark }}>{value}</span>
+  </div>;
+}
+
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+// ══════════════════════════════════════════════════════════════════════════════
+function App() {
+  const [ready, setReady] = useState(false);
+  const [tab, setTab] = useState("dashboard");
+  const [leyes, setLeyes] = useState(LEYES_DEFAULT);
+  const [empleados, setEmpleados] = useState([]);
+  const [prestamos, setPrestamos] = useState([]);
+  const [historial, setHistorial] = useState([]);
+
+  // vistas
+  const [vistaEmp, setVistaEmp] = useState("lista"); // lista | form | detalle | pago
+  const [empActivo, setEmpActivo] = useState(null);
+  const [pagoData, setPagoData] = useState(null);
+  const [liquidacionData, setLiquidacionData] = useState(null);
+  const [formLiq, setFormLiq] = useState({ motivo: "despido_injustificado", fechaSalida: hoy() });
+
+  // form empleado
+  const empVacio = { id: null, nombre: "", puesto: "Empleada doméstica", region: "1", salario: "", fechaIngreso: "", horasExtra: "0", horasExtraNocturnas: "0", diasAusencia: "0", bonos: "0", otrosDeduc: "0", notas: "", foto: null };
+  const [formEmp, setFormEmp] = useState(empVacio);
+  const updEmp = (k, v) => setFormEmp(f => ({ ...f, [k]: v }));
+
+  // form préstamo
+  const prestVacio = { id: null, empleadoId: "", monto: "", cuotaMensual: "", motivo: "", fecha: hoy(), saldo: "" };
+  const [formPrest, setFormPrest] = useState(prestVacio);
+  const [verPrest, setVerPrest] = useState(false);
+
+  // recibo
+  const [reciboMes, setReciboMes] = useState(MESES[new Date().getMonth()]);
+  const [reciboAno, setReciboAno] = useState(String(new Date().getFullYear()));
+  const [quincenaNum, setQuincenaNum] = useState(new Date().getDate() <= 15 ? "1" : "2");
+  const [metodoPago, setMetodoPago] = useState("Transferencia bancaria");
+  const [notasPago, setNotasPago] = useState("");
+  const [correoDestino, setCorreoDestino] = useState("");
+  const [adjuntos, setAdjuntos] = useState([]);
+  const [diasLibresPago, setDiasLibresPago] = useState([]);
+  const fileRef = useRef();
+
+  // load
+  useEffect(() => {
+    (async () => {
+      const [e, l, h, p] = await Promise.all([load(KEYS.empleados), load(KEYS.leyes), load(KEYS.historial), load(KEYS.prestamos)]);
+      if (e) setEmpleados(e);
+      if (l) setLeyes(l);
+      if (h) setHistorial(h);
+      if (p) setPrestamos(p);
+      setReady(true);
+    })();
+  }, []);
+
+  // save on change
+  useEffect(() => { if (ready) save(KEYS.empleados, empleados); }, [empleados, ready]);
+  useEffect(() => { if (ready) save(KEYS.leyes, leyes); }, [leyes, ready]);
+  useEffect(() => { if (ready) save(KEYS.historial, historial); }, [historial, ready]);
+  useEffect(() => { if (ready) save(KEYS.prestamos, prestamos); }, [prestamos, ready]);
+
+  const updLey = (k, v) => setLeyes(l => ({ ...l, [k]: v }));
+
+  // empleado ops
+  const guardarEmp = () => {
+    if (!formEmp.nombre.trim()) return alert("Ingresa el nombre.");
+    if (formEmp.id) {
+      setEmpleados(e => e.map(x => x.id === formEmp.id ? formEmp : x));
+    } else {
+      setEmpleados(e => [...e, { ...formEmp, id: Date.now() }]);
+    }
+    setVistaEmp("lista");
+  };
+
+  const eliminarEmp = (id) => {
+    if (!confirm("¿Eliminar este empleado y todos sus registros?")) return;
+    setEmpleados(e => e.filter(x => x.id !== id));
+    setPrestamos(p => p.filter(x => x.empleadoId !== id));
+    setHistorial(h => h.filter(x => x.empId !== id));
+    setVistaEmp("lista");
+  };
+
+  // préstamo ops
+  const guardarPrest = () => {
+    const monto = parseFloat(formPrest.monto);
+    const cuota = parseFloat(formPrest.cuotaMensual);
+    if (!formPrest.empleadoId || !monto || !cuota) return alert("Completa todos los campos.");
+    const np = { ...formPrest, id: Date.now(), monto, cuotaMensual: cuota, saldo: monto };
+    setPrestamos(p => [...p, np]);
+    setFormPrest(prestVacio);
+    setVerPrest(false);
+  };
+
+  const abonarPrest = (id, abono) => {
+    setPrestamos(p => p.map(x => x.id === id ? { ...x, saldo: Math.max(0, x.saldo - abono) } : x));
+  };
+
+  // pago ops
+  const abrirPago = (emp) => {
+    setEmpActivo(emp);
+    setDiasLibresPago([]);
+    setPagoData(calcularPago(emp, leyes, prestamos, []));
+    setAdjuntos([]);
+    setNotasPago("");
+    setCorreoDestino("");
+    setVistaEmp("pago");
+  };
+
+  // recalculate whenever diasLibresPago changes
+  useEffect(() => {
+    if (empActivo && vistaEmp === "pago") {
+      setPagoData(calcularPago(empActivo, leyes, prestamos, diasLibresPago));
+    }
+  }, [diasLibresPago]);
+
+  const registrarPago = () => {
+    if (!pagoData) return;
+    // Descontar préstamos
+    pagoData.prestEmpleado.forEach(p => abonarPrest(p.id, Math.min(p.cuotaMensual, p.saldo)));
+    const registro = {
+      id: Date.now(), empId: empActivo.id, empNombre: empActivo.nombre, empPuesto: empActivo.puesto,
+      mes: reciboMes, año: reciboAno, quincena: quincenaNum, metodoPago, notas: notasPago, correo: correoDestino,
+      fecha: new Date().toLocaleDateString("es-PA"),
+      ...pagoData, adjuntos: adjuntos.map(a => ({ nombre: a.nombre, data: a.data })),
+      diasLibresPago,
+    };
+    setHistorial(h => [registro, ...h]);
+    generarPDF(pagoData, quincenaNum, reciboMes, reciboAno, metodoPago, notasPago, adjuntos);
+    setVistaEmp("lista");
+    alert(`✓ Pago registrado y recibo generado para ${empActivo.nombre}`);
+  };
+
+  const abrirLiquidacion = (emp) => {
+    setEmpActivo(emp);
+    setFormLiq({ motivo: "despido_injustificado", fechaSalida: hoy() });
+    setLiquidacionData(calcularLiquidacion(emp, leyes, "despido_injustificado", hoy()));
+    setVistaEmp("liquidacion");
+  };
+
+  const recalcLiq = (campo, valor) => {
+    const nf = { ...formLiq, [campo]: valor };
+    setFormLiq(nf);
+    setLiquidacionData(calcularLiquidacion(empActivo, leyes, nf.motivo, nf.fechaSalida));
+  };
+
+  const generarPDFLiquidacion = (liq) => {
+    const MOTIVOS = {
+      despido_injustificado: "Despido sin causa justificada",
+      despido_justificado: "Despido con causa justificada",
+      renuncia_voluntaria: "Renuncia voluntaria",
+      mutuo_acuerdo: "Mutuo acuerdo",
+    };
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Liquidación — ${liq.emp.nombre}</title>
+    <style>
+      body{font-family:Georgia,serif;color:#1a3329;max-width:680px;margin:40px auto;padding:0 20px}
+      h1{font-size:22px;margin:0}
+      .header{border-bottom:3px solid #1a3329;padding-bottom:14px;margin-bottom:20px}
+      .sub{font-size:11px;color:#5a7a6a;letter-spacing:.1em;text-transform:uppercase}
+      table{width:100%;border-collapse:collapse;margin-bottom:16px}
+      td{padding:7px 10px;font-size:13px;border-bottom:1px dashed #d4e8de}
+      td:last-child{text-align:right;font-weight:600}
+      .total-row td{font-size:16px;font-weight:700;border-top:2px solid #1a3329;border-bottom:none;padding-top:12px}
+      .neto-box{background:#1a3329;color:#fff;padding:18px 22px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;margin:16px 0}
+      .info{background:#f0f9f4;border:1px solid #c8e6d4;border-radius:4px;padding:10px 14px;font-size:11px;color:#3d6e50;margin-top:10px;line-height:1.6}
+      .firma{margin-top:44px;display:flex;justify-content:space-between}
+      .firma-line{width:200px;border-top:1px solid #333;text-align:center;padding-top:6px;font-size:11px}
+      .motivo-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;
+        background:${liq.motivo==="despido_injustificado"?"#ffeaea":"#e8f5ee"};
+        color:${liq.motivo==="despido_injustificado"?"#8b0000":"#2d6e54"}}
+      @media print{body{margin:10px}}
+    </style></head><body>
+    <div class="header">
+      <div class="sub">República de Panamá · Carta de Liquidación Laboral</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;flex-wrap:wrap;gap:10px">
+        <div>
+          <h1>${liq.emp.nombre}</h1>
+          <div style="font-size:13px;color:#5a7a6a;margin-top:4px">${liq.emp.puesto} · Región ${liq.emp.region}</div>
+          ${liq.emp.fechaIngreso ? `<div style="font-size:12px;color:#5a7a6a">Fecha ingreso: ${liq.emp.fechaIngreso}</div>` : ""}
+          <div style="font-size:12px;color:#5a7a6a">Antigüedad: ${liq.anosCompletos} año(s) ${liq.mesesExtra} mes(es)</div>
+        </div>
+        <div style="text-align:right">
+          <div class="sub">Fecha de salida</div>
+          <div style="font-size:16px;font-weight:700">${liq.fechaSalida}</div>
+          <div style="margin-top:6px"><span class="motivo-badge">${MOTIVOS[liq.motivo]}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <table>
+      <tr><td>Salario mensual base</td><td>${fmt(liq.salarioMensual)}</td></tr>
+      <tr><td style="color:#666">Días trabajados del período actual (${liq.diasTrabajadosPeriodo} días × ${fmt(liq.valorDia)}/día)</td><td>+ ${fmt(liq.pagoDiasTrabajados)}</td></tr>
+      <tr><td style="color:#666">Vacaciones proporcionales (${liq.mesesDesdeAniversario} mes${liq.mesesDesdeAniversario!==1?"es":""})</td><td>+ ${fmt(liq.vacProporcionales)}</td></tr>
+      <tr><td style="color:#666">Décimo Tercer Mes proporcional (${liq.mesesDesdeDecimo} mes${liq.mesesDesdeDecimo!==1?"es":""})</td><td>+ ${fmt(liq.decimoProporcional)}</td></tr>
+      ${liq.primaAntigüedad > 0 ? `<tr><td style="color:#666">Prima de antigüedad (Art. 229A CT)</td><td>+ ${fmt(liq.primaAntigüedad)}</td></tr>` : ""}
+      ${liq.preaviso > 0 ? `<tr><td style="color:#666">Preaviso (Art. 231 CT domésticos)</td><td>+ ${fmt(liq.preaviso)}</td></tr>` : ""}
+      ${liq.indemnizacion > 0 ? `<tr><td style="color:#8b0000;font-weight:600">Indemnización por despido sin causa (Art. 231 CT — tope 3 meses)</td><td style="color:#8b0000">+ ${fmt(liq.indemnizacion)}</td></tr>` : ""}
+      <tr class="total-row"><td>TOTAL LIQUIDACIÓN</td><td>${fmt(liq.totalLiquidacion)}</td></tr>
+    </table>
+
+    <div class="neto-box">
+      <div>
+        <div style="font-size:10px;opacity:.7;letter-spacing:.1em">TOTAL A PAGAR</div>
+        <div style="font-size:36px;font-weight:700">${fmt(liq.totalLiquidacion)}</div>
+      </div>
+      <div style="text-align:right;font-size:12px;opacity:.8;max-width:200px;line-height:1.5">
+        Plazo de pago: 15 días hábiles desde la fecha de salida
+      </div>
+    </div>
+
+    <div class="info">
+      <strong>Base legal:</strong> Art. 230–231 Código de Trabajo de Panamá (régimen especial trabajadores domésticos).<br>
+      ${liq.motivo==="despido_injustificado" ? "Indemnización: 1 mes de salario por cada año trabajado (fracción ≥ 6 meses cuenta como año), con tope de 3 meses (Art. 231, numeral 4)." : ""}
+      ${liq.motivo==="renuncia_voluntaria" ? "Renuncia voluntaria: no genera indemnización ni prima (Art. 231 CT). Se pagan derechos acumulados." : ""}
+      ${liq.motivo==="mutuo_acuerdo" ? "Mutuo acuerdo: se pagan los derechos adquiridos y la prima de antigüedad (Art. 229A CT)." : ""}
+      ${liq.motivo==="despido_justificado" ? "Despido con causa justificada (Art. 213 CT): no genera indemnización. Se pagan derechos adquiridos y prima de antigüedad." : ""}
+      <br>Este documento es de carácter referencial. Se recomienda consultar con MITRADEL o un abogado laboral para casos específicos.
+    </div>
+
+    <div class="firma">
+      <div class="firma-line">Recibí conforme — Empleada<br><small>${liq.emp.nombre}</small></div>
+      <div class="firma-line">Firma Empleador/a<br><small>Fecha: ${new Date().toLocaleDateString("es-PA")}</small></div>
+    </div>
+    <div style="margin-top:30px;font-size:10px;color:#8aab98;text-align:center">
+      Art. 230–231 Código de Trabajo de Panamá · MITRADEL · Emitido: ${new Date().toLocaleDateString("es-PA")}
+    </div>
+    </body></html>`;
+    const win = window.open("", "_blank");
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => win.print(), 400);
+  };
+
+  const enviarCorreo = () => {
+    if (!correoDestino.trim()) return alert("Por favor ingresa un correo electrónico.");
+    const p = pagoData;
+    const emp = p.emp;
+    const asunto = encodeURIComponent(`Recibo de Pago — ${emp.nombre} — Quincena ${quincenaNum} ${reciboMes} ${reciboAno}`);
+    const cuerpo = encodeURIComponent(
+`Estimada ${emp.nombre},
+
+Adjunto el resumen de su pago correspondiente a la Quincena ${quincenaNum} de ${reciboMes} ${reciboAno}.
+
+──────────────────────────────────
+RECIBO DE PAGO — QUINCENA ${quincenaNum}
+${reciboMes} ${reciboAno} · Método: ${metodoPago}
+──────────────────────────────────
+
+Empleada:       ${emp.nombre}
+Puesto:         ${emp.puesto}
+Región:         ${emp.region}
+${emp.fechaIngreso ? `Fecha ingreso:  ${emp.fechaIngreso}` : ""}
+
+── DETALLE DEL PAGO ──────────────
+Salario mensual base:      ${fmt(p.salarioMensual)}
+Base quincena (÷ 2):       ${fmt(p.quincena)}
+${p.pagoHorasEx > 0 ? `Horas extra diurnas:       + ${fmt(p.pagoHorasEx)}\n` : ""}${p.pagoHorasExNoc > 0 ? `Horas extra nocturnas:     + ${fmt(p.pagoHorasExNoc)}\n` : ""}${p.bonos > 0 ? `Bonos / Propinas:          + ${fmt(p.bonos)}\n` : ""}${p.pagoDiasLibres > 0 ? `Días libres trabajados:    + ${fmt(p.pagoDiasLibres)}\n` : ""}${p.descAusencias > 0 ? `Descuento ausencias:       - ${fmt(p.descAusencias)}\n` : ""}${p.descPrestamo > 0 ? `Descuento préstamo:        - ${fmt(p.descPrestamo)}\n` : ""}
+──────────────────────────────────
+TOTAL A PAGAR:             ${fmt(p.netoEmpleado)}
+──────────────────────────────────
+
+Nota: La CSS (${leyes.cssEmpleador}%) y el Seguro Educativo (${leyes.segEduEmpleador}%) son pagados directamente por el empleador a la CSS — no se descuentan de su salario.
+${notasPago ? `\nObservaciones: ${notasPago}` : ""}
+
+Para consultas, comuníquese con su empleador.
+
+─────────────────────────────────────────────────────────
+Generado con base en Decreto Ejecutivo No.13 (2025) · CSS Ley 462 · Código de Trabajo de Panamá`
+    );
+    window.location.href = `mailto:${correoDestino.trim()}?subject=${asunto}&body=${cuerpo}`;
+  };
+
+  const addDiaLibre = () => {
+    const nuevo = { id: Date.now(), fecha: hoy(), modo: "auto", recargo: "100", monto: "", descripcion: "" };
+    setDiasLibresPago(d => [...d, nuevo]);
+  };
+  const updDiaLibre = (id, field, val) => setDiasLibresPago(d => d.map(x => x.id === id ? { ...x, [field]: val } : x));
+  const removeDiaLibre = (id) => setDiasLibresPago(d => d.filter(x => x.id !== id));
+
+  const adjuntarImagen = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(f => {
+      const reader = new FileReader();
+      reader.onload = ev => setAdjuntos(a => [...a, { nombre: f.name, data: ev.target.result }]);
+      reader.readAsDataURL(f);
+    });
+  };
+
+  // dashboard alertas
+  const alertas = empleados.flatMap(emp => {
+    const a = [];
+    const vac = proximasVacaciones(emp.fechaIngreso, leyes.vacacionesDias);
+    if (vac && vac.diasRestantes <= 30) a.push({ tipo: "vac", emp, vac });
+    const prest = prestamos.filter(p => p.empleadoId === emp.id && p.saldo > 0);
+    if (prest.length > 0) a.push({ tipo: "prest", emp, prest });
+    if (parseFloat(emp.salario) < (emp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2))
+      a.push({ tipo: "salmin", emp });
+    return a;
+  });
+
+  if (!ready) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: C.bg, fontFamily: "monospace", color: C.muted }}>Cargando datos...</div>;
+
+  // ── RENDER ──────────────────────────────────────────────────────────────────
+  return (
+    <div style={{ fontFamily: "'DM Mono', 'Courier New', monospace", minHeight: "100vh", background: C.bg, color: C.dark }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Fraunces:wght@600;700&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        input,select,textarea{transition:border .15s;font-family:'DM Mono',monospace}
+        input:focus,select:focus,textarea:focus{border-color:${C.accent}!important;outline:none;box-shadow:0 0 0 2px ${C.accentLight}}
+        ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}
+        .tab{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:10px 18px;background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s;white-space:nowrap}
+        .tab.on{border-bottom-color:${C.accent};color:${C.dark}}
+        .tab:hover{color:${C.dark}}
+        .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+        @media(max-width:580px){.g2,.g3{grid-template-columns:1fr}.hd-sm{display:none!important}}
+        .emp-row{background:#fff;border:1px solid ${C.border};border-radius:8px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;transition:box-shadow .15s}
+        .emp-row:hover{box-shadow:0 3px 16px #0f241910}
+        .badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.07em;padding:2px 7px;border-radius:20px;text-transform:uppercase}
+        .alerta-card{border-radius:8px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;font-size:12px}
+        .vac-bar{height:6px;border-radius:3px;background:${C.border};overflow:hidden;margin-top:4px}
+        .vac-bar-fill{height:100%;border-radius:3px;background:${C.accent};transition:width .3s}
+      `}</style>
+
+      {/* HEADER */}
+      <div style={{ background: C.dark, color: "#e8f5ee" }}>
+        <div style={{ maxWidth: 780, margin: "0 auto", padding: "22px 20px 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+            <div>
+              <div style={{ fontSize: 10, letterSpacing: "0.3em", color: "#5aab7a", fontFamily: "'DM Mono',monospace" }}>PANAMÁ · USD · BALBOA 1:1</div>
+              <h1 style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: 28, fontWeight: 700, marginTop: 4 }}>Casa & Personal</h1>
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <span style={{ background: "#1e3d2a", borderRadius: 20, padding: "4px 12px", fontSize: 10, color: "#5aab7a", fontFamily: "monospace" }}>
+                {empleados.length} empleado{empleados.length !== 1 ? "s" : ""}
+              </span>
+              {alertas.length > 0 && <span style={{ background: "#4a1e0e", borderRadius: 20, padding: "4px 12px", fontSize: 10, color: "#ff9f7f", fontFamily: "monospace" }}>
+                ⚠ {alertas.length} alerta{alertas.length !== 1 ? "s" : ""}
+              </span>}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 2, overflowX: "auto" }}>
+            {[["dashboard","📊 Inicio"],["empleados","👥 Empleados"],["prestamos","💰 Préstamos"],["historial","📄 Historial"],["leyes","⚙ Reglas"]].map(([t, l]) => (
+              <button key={t} className={`tab${tab === t ? " on" : ""}`}
+                style={{ color: tab === t ? "#e8f5ee" : "#5aab7a", borderBottomColor: tab === t ? "#5aab7a" : "transparent" }}
+                onClick={() => { setTab(t); setVistaEmp("lista"); }}>{l}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 780, margin: "0 auto", padding: "24px 16px 80px" }}>
+
+        {/* ══ DASHBOARD ══════════════════════════════════════════════════════ */}
+        {tab === "dashboard" && (
+          <div>
+            {/* Resumen */}
+            <div className="g3" style={{ marginBottom: 16 }}>
+              {[
+                ["Empleados", empleados.length, "👤"],
+                ["Gasto mensual est.", fmt(empleados.reduce((s, e) => s + (calcularPago(e, leyes, prestamos, []).costoMensualEmpleador), 0)), "💵"],
+                ["Préstamos activos", prestamos.filter(p => p.saldo > 0).length, "🏦"],
+              ].map(([label, val, icon]) => (
+                <Card key={label} style={{ padding: "14px 18px", textAlign: "center" }}>
+                  <div style={{ fontSize: 22 }}>{icon}</div>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, margin: "4px 0" }}>{val}</div>
+                  <div style={{ fontSize: 10, color: C.muted, letterSpacing: ".08em", textTransform: "uppercase" }}>{label}</div>
+                </Card>
+              ))}
+            </div>
+
+            {/* Alertas */}
+            {alertas.length > 0 && (
+              <Card>
+                <SectionTitle>⚠ Alertas</SectionTitle>
+                {alertas.map((a, i) => (
+                  <div key={i} className="alerta-card" style={{
+                    background: a.tipo === "vac" ? "#fff8e1" : a.tipo === "salmin" ? "#fff0ef" : "#f0f6f2",
+                    border: `1px solid ${a.tipo === "vac" ? "#ffe082" : a.tipo === "salmin" ? "#ffccc7" : C.border}`
+                  }}>
+                    <span style={{ fontSize: 18 }}>{a.tipo === "vac" ? "🌴" : a.tipo === "salmin" ? "❗" : "🏦"}</span>
+                    <div style={{ flex: 1 }}>
+                      <strong>{a.emp.nombre}</strong>
+                      {a.tipo === "vac" && <>
+                        <span style={{ color: C.gold }}> · Vacaciones en {a.vac.diasRestantes} días</span>
+                        <div style={{ color: C.muted, fontSize: 11 }}>Fecha: {a.vac.fecha} · {a.vac.aniosCumplidos} año(s) laborados → {leyes.vacacionesDias} días de vacaciones</div>
+                        <div className="vac-bar"><div className="vac-bar-fill" style={{ width: `${Math.max(5, 100 - (a.vac.diasRestantes / 365) * 100)}%` }} /></div>
+                      </>}
+                      {a.tipo === "salmin" && <span style={{ color: C.warn }}> · Salario por debajo del mínimo legal ({fmt(a.emp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2)})</span>}
+                      {a.tipo === "prest" && <span style={{ color: C.accent }}> · Préstamo(s) activo(s): {fmt(a.prest.reduce((s, p) => s + p.saldo, 0))} pendiente</span>}
+                    </div>
+                  </div>
+                ))}
+              </Card>
+            )}
+
+            {/* Tabla empleados resumen */}
+            {empleados.length > 0 && (
+              <Card>
+                <SectionTitle>Empleados — Este mes</SectionTitle>
+                {empleados.map(emp => {
+                  const p = calcularPago(emp, leyes, prestamos, []);
+                  const vac = proximasVacaciones(emp.fechaIngreso, leyes.vacacionesDias);
+                  return (
+                    <div key={emp.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px dashed ${C.border}`, gap: 10, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {emp.foto
+                          ? <img src={emp.foto} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: `2px solid ${C.border}` }} />
+                          : <div style={{ width: 36, height: 36, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>👤</div>
+                        }
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 14 }}>{emp.nombre}</div>
+                          <div style={{ fontSize: 11, color: C.muted }}>{emp.puesto} {vac ? `· 🌴 ${vac.diasRestantes}d` : ""}</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontWeight: 700, color: C.accent }}>{fmt(p.netoEmpleado)}</div>
+                        <div style={{ fontSize: 10, color: C.muted }}>Costo/mes: {fmt(p.costoMensualEmpleador)}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </Card>
+            )}
+
+            {empleados.length === 0 && (
+              <Card style={{ textAlign: "center", padding: "50px 20px", color: C.muted }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🏡</div>
+                <div style={{ fontSize: 15, marginBottom: 6 }}>Bienvenido a Casa & Personal</div>
+                <div style={{ fontSize: 12, marginBottom: 20 }}>Comienza agregando a tu primer empleado</div>
+                <Btn onClick={() => { setTab("empleados"); setFormEmp(empVacio); setVistaEmp("form"); }}>+ Agregar Empleado</Btn>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* ══ EMPLEADOS ══════════════════════════════════════════════════════ */}
+        {tab === "empleados" && vistaEmp === "lista" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <span style={{ fontSize: 12, color: C.muted }}>{empleados.length} empleado{empleados.length !== 1 ? "s" : ""}</span>
+              <Btn onClick={() => { setFormEmp({ ...empVacio }); setVistaEmp("form"); }}>+ Nuevo Empleado</Btn>
+            </div>
+            {empleados.length === 0 && <div style={{ textAlign: "center", padding: "50px", color: C.muted }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>👤</div>Agrega tu primer empleado
+            </div>}
+            {empleados.map(emp => {
+              const ant = antiguedad(emp.fechaIngreso);
+              const salMin = emp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2;
+              const bajo = parseFloat(emp.salario) < salMin;
+              const vac = proximasVacaciones(emp.fechaIngreso, leyes.vacacionesDias);
+              return (
+                <div key={emp.id} className="emp-row">
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+                    {emp.foto
+                      ? <img src={emp.foto} style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: `2px solid ${C.border}`, flexShrink: 0 }} />
+                      : <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>👤</div>
+                    }
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15, display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                        {emp.nombre}
+                        {bajo && <span className="badge" style={{ background: "#ffeaea", color: C.warn }}>⚠ bajo mínimo</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
+                        {emp.puesto} · Región {emp.region} · {fmt(parseFloat(emp.salario) || 0)}/mes
+                        {emp.fechaIngreso && ` · ${ant.texto}`}
+                        {vac && vac.diasRestantes <= 60 && ` · 🌴 vac. en ${vac.diasRestantes}d`}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <Btn small variant="accent" onClick={() => abrirPago(emp)}>Pagar</Btn>
+                    <Btn small variant="outline" onClick={() => { setEmpActivo(emp); setVistaEmp("detalle"); }}>Ver</Btn>
+                    <Btn small variant="ghost" onClick={() => { setFormEmp(emp); setVistaEmp("form"); }}>Editar</Btn>
+                    <Btn small variant="danger" onClick={() => abrirLiquidacion(emp)}>Liquidar</Btn>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* FORM EMPLEADO */}
+        {tab === "empleados" && vistaEmp === "form" && (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <Btn variant="ghost" small onClick={() => setVistaEmp("lista")}>← Volver</Btn>
+              <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 20 }}>{formEmp.id ? "Editar Empleado" : "Nuevo Empleado"}</h2>
+            </div>
+
+            <Card>
+              <SectionTitle>Foto del Empleado</SectionTitle>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                {formEmp.foto
+                  ? <img src={formEmp.foto} style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: `2px solid ${C.border}` }} />
+                  : <div style={{ width: 72, height: 72, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>👤</div>
+                }
+                <div>
+                  <input type="file" accept="image/*" style={{ display: "none" }} id="fotoEmp" onChange={e => {
+                    const f = e.target.files[0]; if (!f) return;
+                    const r = new FileReader(); r.onload = ev => updEmp("foto", ev.target.result); r.readAsDataURL(f);
+                  }} />
+                  <Btn small variant="outline" onClick={() => document.getElementById("fotoEmp").click()}>📷 Subir foto</Btn>
+                  {formEmp.foto && <Btn small variant="danger" sx={{ marginLeft: 8 }} onClick={() => updEmp("foto", null)}>Quitar</Btn>}
+                </div>
+              </div>
+            </Card>
+
+            <Card>
+              <SectionTitle>Información Personal</SectionTitle>
+              <div className="g2" style={{ marginBottom: 14 }}>
+                <Inp label="Nombre Completo">{input(formEmp.nombre, v => updEmp("nombre", v), { placeholder: "Ej. María González" })}</Inp>
+                <Inp label="Puesto / Función">{sel(formEmp.puesto, v => updEmp("puesto", v), [
+                  ["Empleada doméstica","Empleada doméstica"],["Cocinera","Cocinera"],["Niñera","Niñera"],
+                  ["Jardinero","Jardinero"],["Chofer","Chofer"],["Mayordomo/a","Mayordomo/a"],["Otro","Otro"]
+                ])}</Inp>
+              </div>
+              <div className="g2">
+                <Inp label="Fecha de Ingreso">
+                  {input(formEmp.fechaIngreso, v => updEmp("fechaIngreso", v), { type: "date" })}
+                  {formEmp.fechaIngreso && <span style={{ fontSize: 10, color: C.accent, fontFamily: "monospace" }}>
+                    {antiguedad(formEmp.fechaIngreso).texto}
+                  </span>}
+                </Inp>
+                <Inp label="Región">{sel(formEmp.region, v => updEmp("region", v), [
+                  ["1","Región 1 — Ciudad de Panamá, Colón, David…"],
+                  ["2","Región 2 — Resto del país"]
+                ])}</Inp>
+              </div>
+            </Card>
+
+            <Card>
+              <SectionTitle>Salario y Percepciones del Mes</SectionTitle>
+              <div className="g3" style={{ marginBottom: 14 }}>
+                <Inp label="Salario Base/mes (USD)"
+                  hint={`Mínimo: ${fmt(formEmp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2)}`}
+                  warn={formEmp.salario && parseFloat(formEmp.salario) < (formEmp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2) ? "Por debajo del mínimo legal" : null}>
+                  {input(formEmp.salario, v => updEmp("salario", v), { type: "number", placeholder: "340.00", min: "0", step: "0.01" })}
+                </Inp>
+                <Inp label="Horas Extra Diurnas">{input(formEmp.horasExtra, v => updEmp("horasExtra", v), { type: "number", placeholder: "0", min: "0" })}</Inp>
+                <Inp label="Horas Extra Nocturnas">{input(formEmp.horasExtraNocturnas, v => updEmp("horasExtraNocturnas", v), { type: "number", placeholder: "0", min: "0" })}</Inp>
+              </div>
+              <div className="g3">
+                <Inp label="Días de Ausencia">{input(formEmp.diasAusencia, v => updEmp("diasAusencia", v), { type: "number", placeholder: "0", min: "0" })}</Inp>
+                <Inp label="Bonos / Propinas">{input(formEmp.bonos, v => updEmp("bonos", v), { type: "number", placeholder: "0.00", min: "0", step: "0.01" })}</Inp>
+                <Inp label="Otras Deducciones">{input(formEmp.otrosDeduc, v => updEmp("otrosDeduc", v), { type: "number", placeholder: "0.00", min: "0", step: "0.01" })}</Inp>
+              </div>
+            </Card>
+
+            <Card>
+              <SectionTitle>Notas Internas</SectionTitle>
+              <textarea value={formEmp.notas} onChange={e => updEmp("notas", e.target.value)}
+                placeholder="Acuerdos, observaciones, etc."
+                style={{ width: "100%", minHeight: 70, padding: "8px 12px", border: `1.5px solid ${C.border}`, borderRadius: 5, fontFamily: "monospace", fontSize: 13, background: "#f8fcfa", color: C.dark, resize: "vertical" }} />
+            </Card>
+
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+              <div>{formEmp.id && <Btn variant="danger" onClick={() => eliminarEmp(formEmp.id)}>Eliminar empleado</Btn>}</div>
+              <div style={{ display: "flex", gap: 10 }}>
+                <Btn variant="ghost" onClick={() => setVistaEmp("lista")}>Cancelar</Btn>
+                <Btn onClick={guardarEmp}>{formEmp.id ? "Actualizar" : "Guardar Empleado"}</Btn>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DETALLE EMPLEADO */}
+        {tab === "empleados" && vistaEmp === "detalle" && empActivo && (() => {
+          const emp = empleados.find(e => e.id === empActivo.id) || empActivo;
+          const ant = antiguedad(emp.fechaIngreso);
+          const vac = proximasVacaciones(emp.fechaIngreso, leyes.vacacionesDias);
+          const prest = prestamos.filter(p => p.empleadoId === emp.id);
+          const pagos = historial.filter(h => h.empId === emp.id);
+          return (
+            <div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+                <Btn variant="ghost" small onClick={() => setVistaEmp("lista")}>← Volver</Btn>
+                <Btn small variant="ghost" onClick={() => { setFormEmp(emp); setVistaEmp("form"); }}>✏ Editar</Btn>
+                <Btn small variant="accent" onClick={() => abrirPago(emp)}>💵 Calcular Pago</Btn>
+                <Btn small variant="danger" onClick={() => abrirLiquidacion(emp)}>📋 Liquidar</Btn>
+              </div>
+
+              <Card style={{ background: C.dark, color: "#e8f5ee", border: "none" }}>
+                <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+                  {emp.foto
+                    ? <img src={emp.foto} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", border: "2px solid #2e7d55" }} />
+                    : <div style={{ width: 64, height: 64, borderRadius: "50%", background: "#1e3d2a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>👤</div>
+                  }
+                  <div>
+                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700 }}>{emp.nombre}</div>
+                    <div style={{ color: "#5aab7a", fontSize: 13, marginTop: 2 }}>{emp.puesto} · Región {emp.region}</div>
+                    {emp.fechaIngreso && <div style={{ color: "#5aab7a", fontSize: 12 }}>Ingreso: {emp.fechaIngreso} · {ant.texto}</div>}
+                  </div>
+                  <div style={{ marginLeft: "auto", textAlign: "right" }}>
+                    <div style={{ fontSize: 10, color: "#5aab7a" }}>SALARIO BASE</div>
+                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 26, fontWeight: 700 }}>{fmt(parseFloat(emp.salario) || 0)}</div>
+                  </div>
+                </div>
+              </Card>
+
+              {vac && (
+                <Card style={{ background: vac.diasRestantes <= 30 ? "#fff8e1" : C.accentLight, border: `1px solid ${vac.diasRestantes <= 30 ? "#ffe082" : C.border}` }}>
+                  <SectionTitle color={vac.diasRestantes <= 30 ? C.gold : C.accent}>🌴 Vacaciones</SectionTitle>
+                  <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>Próximas vacaciones: {vac.fecha}</div>
+                      <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>En {vac.diasRestantes} días · {vac.aniosCumplidos} año(s) laborados → derecho a {leyes.vacacionesDias} días</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 11, color: C.muted }}>Valor día de vacación</div>
+                      <div style={{ fontWeight: 700, fontSize: 16 }}>{fmt((parseFloat(emp.salario) || 0) / 30)}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>Pago total vacaciones est.</div>
+                      <div style={{ fontWeight: 700, fontSize: 16, color: C.accent }}>{fmt(((parseFloat(emp.salario) || 0) / 30) * leyes.vacacionesDias)}</div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {prest.length > 0 && (
+                <Card>
+                  <SectionTitle>💰 Préstamos</SectionTitle>
+                  {prest.map(p => (
+                    <div key={p.id} style={{ padding: "10px 0", borderBottom: `1px dashed ${C.border}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{p.motivo || "Préstamo"}</div>
+                          <div style={{ fontSize: 11, color: C.muted }}>Otorgado: {p.fecha} · Cuota: {fmt(p.cuotaMensual)}/mes</div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 12, color: C.muted }}>Monto original: {fmt(p.monto)}</div>
+                          <div style={{ fontWeight: 700, color: p.saldo > 0 ? C.warn : C.accent }}>Saldo: {fmt(p.saldo)}</div>
+                        </div>
+                      </div>
+                      {p.saldo > 0 && (
+                        <div className="vac-bar" style={{ marginTop: 6 }}>
+                          <div className="vac-bar-fill" style={{ width: `${(1 - p.saldo / p.monto) * 100}%`, background: C.accent }} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </Card>
+              )}
+
+              {pagos.length > 0 && (
+                <Card>
+                  <SectionTitle>📄 Historial de Pagos</SectionTitle>
+                  {pagos.slice(0, 6).map(h => (
+                    <div key={h.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `1px dashed ${C.border}`, fontSize: 13 }}>
+                      <span>{h.mes} {h.año} · {h.metodoPago}</span>
+                      <span style={{ fontWeight: 700 }}>{fmt(h.netoEmpleado)}</span>
+                    </div>
+                  ))}
+                </Card>
+              )}
+
+              {emp.notas && <Card><SectionTitle>📝 Notas</SectionTitle><div style={{ fontSize: 13, color: C.muted }}>{emp.notas}</div></Card>}
+            </div>
+          );
+        })()}
+
+        {/* PAGO / RECIBO */}
+        {tab === "empleados" && vistaEmp === "pago" && pagoData && (
+          <div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", justifyContent: "space-between" }}>
+              <Btn variant="ghost" small onClick={() => setVistaEmp("lista")}>← Volver</Btn>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn small variant="outline" onClick={() => generarPDF(pagoData, quincenaNum, reciboMes, reciboAno, metodoPago, notasPago, adjuntos)}>🖨 Vista previa PDF</Btn>
+                <Btn small variant="accent" onClick={registrarPago}>✓ Confirmar y Descargar</Btn>
+              </div>
+            </div>
+
+            {/* Cabecera */}
+            <Card style={{ background: C.dark, color: "#e8f5ee", border: "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: "#5aab7a", letterSpacing: ".15em" }}>RECIBO QUINCENA {quincenaNum}</div>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 700, marginTop: 4 }}>{pagoData.emp.nombre}</div>
+                  <div style={{ color: "#5aab7a", fontSize: 12, marginTop: 2 }}>{pagoData.emp.puesto} · Región {pagoData.emp.region}</div>
+                  {pagoData.emp.fechaIngreso && <div style={{ color: "#5aab7a", fontSize: 11 }}>Antigüedad: {antiguedad(pagoData.emp.fechaIngreso).texto}</div>}
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 10, color: "#5aab7a" }}>RECIBE ESTA QUINCENA</div>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 36, fontWeight: 700, color: "#7dd9a8" }}>{fmt(pagoData.netoEmpleado)}</div>
+                  <div style={{ fontSize: 11, color: "#5aab7a" }}>Salario mensual: {fmt(pagoData.salarioMensual)}</div>
+                  <div style={{ fontSize: 11, color: "#5aab7a" }}>Costo real empleador/mes: {fmt(pagoData.costoMensualEmpleador)}</div>
+                </div>
+              </div>
+              {pagoData.bajoMinimo && <div style={{ marginTop: 10, background: "#4a1e0e", borderRadius: 4, padding: "8px 12px", fontSize: 12, color: "#ff9f7f" }}>
+                ⚠ Salario mensual por debajo del mínimo legal ({fmt(pagoData.salMin)})
+              </div>}
+            </Card>
+
+            {/* Período y método */}
+            <Card>
+              <SectionTitle>Datos del Recibo</SectionTitle>
+              <div className="g2" style={{ marginBottom: 14 }}>
+                <Inp label="Quincena">{sel(quincenaNum, setQuincenaNum, [["1","1ª Quincena (1–15)"],["2","2ª Quincena (16–fin de mes)"]])}</Inp>
+                <Inp label="Mes">{sel(reciboMes, setReciboMes, MESES.map(m => [m, m]))}</Inp>
+              </div>
+              <div className="g2">
+                <Inp label="Año">{input(reciboAno, setReciboAno, { type: "number", placeholder: "2025" })}</Inp>
+                <Inp label="Método de Pago">{sel(metodoPago, setMetodoPago, [
+                  ["Transferencia bancaria","Transferencia bancaria"],["Efectivo","Efectivo"],
+                  ["Cheque","Cheque"],["Nequi/Yappy","Nequi/Yappy"],["Otro","Otro"]
+                ])}</Inp>
+              </div>
+            </Card>
+
+            {/* Días Libres Trabajados */}
+            <Card>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: C.accent, fontFamily: "monospace" }}>☀️ Días Libres Trabajados</div>
+                <Btn small variant="outline" onClick={addDiaLibre}>+ Agregar día</Btn>
+              </div>
+              {diasLibresPago.length === 0 && (
+                <div style={{ fontSize: 12, color: C.muted, textAlign: "center", padding: "12px 0" }}>
+                  Si el empleado trabajó algún día libre (domingo, feriado, etc.) agrégalo aquí.
+                </div>
+              )}
+              {diasLibresPago.map((d, i) => {
+                const valorDiaEmp = (parseFloat(empActivo?.salario) || 0) / 30;
+                const montoAuto = valorDiaEmp * (1 + (parseFloat(d.recargo) || 100) / 100);
+                return (
+                  <div key={d.id} style={{ background: "#f8fcfa", border: `1px solid ${C.border}`, borderRadius: 6, padding: "14px 16px", marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "monospace" }}>Día libre #{i + 1}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: C.accent }}>
+                          {d.modo === "fijo" ? fmt(parseFloat(d.monto) || 0) : fmt(montoAuto)}
+                        </span>
+                        <button onClick={() => removeDiaLibre(d.id)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: C.warn, fontSize: 16, lineHeight: 1 }}>×</button>
+                      </div>
+                    </div>
+                    <div className="g2" style={{ marginBottom: 10 }}>
+                      <Inp label="Fecha">
+                        {input(d.fecha, v => updDiaLibre(d.id, "fecha", v), { type: "date" })}
+                      </Inp>
+                      <Inp label="Descripción (opcional)">
+                        {input(d.descripcion, v => updDiaLibre(d.id, "descripcion", v), { placeholder: "Ej. Domingo 12 de mayo" })}
+                      </Inp>
+                    </div>
+                    {/* Toggle: auto vs fijo */}
+                    <div style={{ display: "flex", gap: 0, marginBottom: 10, borderRadius: 5, overflow: "hidden", border: `1.5px solid ${C.border}`, width: "fit-content" }}>
+                      {[["auto","🔢 Calcular automático"],["fijo","✏ Monto fijo"]].map(([v, l]) => (
+                        <button key={v} onClick={() => updDiaLibre(d.id, "modo", v)}
+                          style={{ padding: "6px 14px", fontSize: 11, fontFamily: "monospace", fontWeight: 600, border: "none", cursor: "pointer", background: d.modo === v ? C.dark : "#fff", color: d.modo === v ? "#e8f5ee" : C.muted, transition: "all .15s" }}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                    {d.modo === "auto" ? (
+                      <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+                        <Inp label="Recargo sobre el día normal (%)" hint="100% = doble pago (valor día × 2)">
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            {input(d.recargo, v => updDiaLibre(d.id, "recargo", v), { type: "number", min: "0", max: "300", style: { width: 90 } })}
+                            <div style={{ display: "flex", gap: 4 }}>
+                              {[["100","×2"],["50","×1.5"],["0","×1"]].map(([r, l]) => (
+                                <button key={r} onClick={() => updDiaLibre(d.id, "recargo", r)}
+                                  style={{ padding: "4px 8px", fontSize: 10, fontFamily: "monospace", border: `1px solid ${d.recargo === r ? C.accent : C.border}`, borderRadius: 4, background: d.recargo === r ? C.accentLight : "#fff", cursor: "pointer", color: d.recargo === r ? C.accent : C.muted }}>
+                                  {l}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </Inp>
+                        <div style={{ paddingBottom: 4 }}>
+                          <div style={{ fontSize: 10, color: C.muted, fontFamily: "monospace" }}>Día normal: {fmt(valorDiaEmp)}</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>A pagar: {fmt(montoAuto)}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <Inp label="Monto a pagar por este día (USD)">
+                        {input(d.monto, v => updDiaLibre(d.id, "monto", v), { type: "number", placeholder: "0.00", min: "0", step: "0.01" })}
+                      </Inp>
+                    )}
+                  </div>
+                );
+              })}
+              {diasLibresPago.length > 0 && (
+                <div style={{ display: "flex", justifyContent: "flex-end", fontSize: 13, fontWeight: 700, color: C.accent, fontFamily: "monospace", paddingTop: 6 }}>
+                  Total días libres: {fmt(pagoData?.pagoDiasLibres || 0)}
+                </div>
+              )}
+            </Card>
+
+            {/* Desglose quincenal */}
+            <Card>
+              <SectionTitle color="#2d6e54">💵 Detalle del Pago</SectionTitle>
+              <LineRow label="Salario mensual base" value={fmt(pagoData.salarioMensual)} />
+              <LineRow sub label="÷ 2 quincenas → base esta quincena" value={fmt(pagoData.quincena)} bold />
+              {pagoData.pagoHorasEx > 0 && <LineRow sub label={`Horas Extra Diurnas (+${leyes.horasExtraRecargo}%)`} value={`+ ${fmt(pagoData.pagoHorasEx)}`} color="#2d6e54" />}
+              {pagoData.pagoHorasExNoc > 0 && <LineRow sub label={`Horas Extra Nocturnas (+${leyes.horasExtraNocturnas}%)`} value={`+ ${fmt(pagoData.pagoHorasExNoc)}`} color="#2d6e54" />}
+              {pagoData.bonos > 0 && <LineRow sub label="Bonos / Propinas" value={`+ ${fmt(pagoData.bonos)}`} color="#2d6e54" />}
+              {pagoData.pagoDiasLibres > 0 && <LineRow sub label={`Días Libres Trabajados (${pagoData.diasLibres.length} día${pagoData.diasLibres.length !== 1 ? "s" : ""})`} value={`+ ${fmt(pagoData.pagoDiasLibres)}`} color="#2d6e54" />}
+              {pagoData.descAusencias > 0 && <LineRow sub label="Descuento Ausencias" value={`− ${fmt(pagoData.descAusencias)}`} color={C.warn} />}
+              {pagoData.descPrestamo > 0 && <LineRow sub label="Descuento Préstamo(s)" value={`− ${fmt(pagoData.descPrestamo)}`} color={C.warn} />}
+              {pagoData.otrosDeduc > 0 && <LineRow sub label="Otras Deducciones" value={`− ${fmt(pagoData.otrosDeduc)}`} color={C.warn} />}
+            </Card>
+
+            <Card style={{ background: "#f0f9f4", border: `1px solid ${C.border}` }}>
+              <SectionTitle color="#1a4a6a">ℹ️ Aportes Patronales (no se descuentan a la empleada)</SectionTitle>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 10, fontFamily: "monospace" }}>
+                Estos los pagas tú directamente a la CSS — la empleada recibe su quincena completa.
+              </div>
+              <LineRow sub label={`CSS Empleador (${leyes.cssEmpleador}%) sobre salario mensual`} value={fmt(pagoData.cssPatron)} />
+              <LineRow sub label={`Seguro Educativo (${leyes.segEduEmpleador}%) sobre salario mensual`} value={fmt(pagoData.segEduPatron)} />
+              {leyes.decimoTercerMes && <LineRow sub label="Décimo Tercer Mes (provisión mensual)" value={fmt(pagoData.decimoTercerMensual)} />}
+              <LineRow sub label="Vacaciones (provisión mensual)" value={fmt(pagoData.vacacionesMensual)} />
+              <LineRow bold label="Costo real mensual para ti" value={fmt(pagoData.costoMensualEmpleador)} />
+            </Card>
+
+            {/* Adjuntos */}
+            <Card>
+              <SectionTitle>📎 Comprobantes Adjuntos</SectionTitle>
+              <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: "none" }} onChange={adjuntarImagen} />
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: adjuntos.length > 0 ? 12 : 0 }}>
+                {adjuntos.map((a, i) => (
+                  <div key={i} style={{ position: "relative" }}>
+                    <img src={a.data} style={{ width: 80, height: 80, objectFit: "cover", borderRadius: 6, border: `1px solid ${C.border}` }} />
+                    <button onClick={() => setAdjuntos(x => x.filter((_, j) => j !== i))}
+                      style={{ position: "absolute", top: -4, right: -4, width: 18, height: 18, borderRadius: "50%", background: C.warn, color: "#fff", border: "none", fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                  </div>
+                ))}
+              </div>
+              <Btn small variant="outline" onClick={() => fileRef.current.click()}>+ Adjuntar imagen</Btn>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Recibos de pago, transferencias, vouchers, etc.</div>
+            </Card>
+
+            <Card>
+              <SectionTitle>📝 Notas del Pago</SectionTitle>
+              <textarea value={notasPago} onChange={e => setNotasPago(e.target.value)}
+                placeholder="Observaciones adicionales para el recibo..."
+                style={{ width: "100%", minHeight: 60, padding: "8px 12px", border: `1.5px solid ${C.border}`, borderRadius: 5, fontFamily: "monospace", fontSize: 13, background: "#f8fcfa", resize: "vertical" }} />
+            </Card>
+
+            {/* Enviar por correo */}
+            <Card style={{ border: `1.5px solid ${C.border}` }}>
+              <SectionTitle>✉️ Enviar Recibo por Correo</SectionTitle>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <Inp label="Correo de la empleada">
+                    {input(correoDestino, setCorreoDestino, {
+                      type: "email",
+                      placeholder: "ejemplo@correo.com",
+                    })}
+                  </Inp>
+                </div>
+                <Btn
+                  variant="outline"
+                  onClick={enviarCorreo}
+                  disabled={!correoDestino.trim()}
+                  style={{ marginBottom: 1 }}
+                >
+                  📧 Abrir correo
+                </Btn>
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 8, fontFamily: "monospace", lineHeight: 1.5 }}>
+                Abre tu app de Mail (o Gmail) con el resumen del pago listo para enviar. Solo presionas "Enviar".
+              </div>
+            </Card>
+
+            {/* Neto final */}
+            <div style={{ background: C.dark, borderRadius: 8, padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 10, color: "#5aab7a", letterSpacing: ".1em" }}>RECIBE LA EMPLEADA — QUINCENA {quincenaNum}</div>
+                <div style={{ fontFamily: "'Fraunces',serif", fontSize: 34, color: "#7dd9a8", fontWeight: 700 }}>{fmt(pagoData.netoEmpleado)}</div>
+                <div style={{ fontSize: 11, color: "#5aab7a", marginTop: 2 }}>Sin descuentos — CSS y SegEdu los paga el empleador</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 10, color: "#5aab7a", letterSpacing: ".1em" }}>COSTO REAL MENSUAL</div>
+                <div style={{ fontFamily: "'Fraunces',serif", fontSize: 22, color: "#e8f5ee", fontWeight: 700 }}>{fmt(pagoData.costoMensualEmpleador)}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══ LIQUIDACIÓN ════════════════════════════════════════════════════ */}
+        {tab === "empleados" && vistaEmp === "liquidacion" && liquidacionData && empActivo && (() => {
+          const liq = liquidacionData;
+          const MOTIVOS = [
+            ["despido_injustificado","🔴 Despido sin causa justificada","El empleador termina el contrato sin razón válida. Genera indemnización."],
+            ["despido_justificado","⚠️ Despido con causa justificada","Hay una causa legal comprobada (Art. 213 CT). Sin indemnización."],
+            ["renuncia_voluntaria","🚪 Renuncia voluntaria","La empleada decide irse. Sin indemnización ni prima."],
+            ["mutuo_acuerdo","🤝 Mutuo acuerdo","Ambas partes deciden terminar. Prima de antigüedad aplica."],
+          ];
+          return (
+            <div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 20, justifyContent: "space-between", flexWrap: "wrap" }}>
+                <Btn variant="ghost" small onClick={() => setVistaEmp(empActivo ? "detalle" : "lista")}>← Volver</Btn>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Btn small variant="outline" onClick={() => generarPDFLiquidacion(liq)}>🖨 Vista previa PDF</Btn>
+                  <Btn small variant="danger" onClick={() => { generarPDFLiquidacion(liq); alert(`✓ Liquidación generada para ${liq.emp.nombre}.`); }}>
+                    ✓ Confirmar y Descargar
+                  </Btn>
+                </div>
+              </div>
+
+              {/* Cabecera roja */}
+              <div style={{ background: "#3d0f0f", color: "#ffeaea", borderRadius: 8, padding: "20px 24px", marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: "#ff9f7f", letterSpacing: ".2em", marginBottom: 4 }}>CARTA DE LIQUIDACIÓN · ART. 231 CÓDIGO DE TRABAJO</div>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 12, alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 700 }}>{liq.emp.nombre}</div>
+                    <div style={{ color: "#ff9f7f", fontSize: 12, marginTop: 3 }}>{liq.emp.puesto} · Región {liq.emp.region}</div>
+                    {liq.emp.fechaIngreso && <div style={{ color: "#ff9f7f", fontSize: 11, marginTop: 2 }}>
+                      Ingreso: {liq.emp.fechaIngreso} · Antigüedad: {liq.anosCompletos} año{liq.anosCompletos!==1?"s":""} {liq.mesesExtra} mes{liq.mesesExtra!==1?"es":""}
+                    </div>}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 10, color: "#ff9f7f" }}>TOTAL A PAGAR</div>
+                    <div style={{ fontFamily: "'Fraunces',serif", fontSize: 38, fontWeight: 700, color: "#ffcfc5" }}>{fmt(liq.totalLiquidacion)}</div>
+                    <div style={{ fontSize: 11, color: "#ff9f7f" }}>Plazo: 15 días hábiles</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Selector motivo */}
+              <Card>
+                <SectionTitle>Motivo de Terminación</SectionTitle>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {MOTIVOS.map(([val, label, desc]) => (
+                    <div key={val} onClick={() => recalcLiq("motivo", val)}
+                      style={{ padding: "12px 16px", borderRadius: 6, border: `2px solid ${formLiq.motivo === val ? C.warn : C.border}`, background: formLiq.motivo === val ? "#fff5f5" : "#fafafa", cursor: "pointer", transition: "all .15s" }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, fontFamily: "monospace" }}>{label}</div>
+                      <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 14 }}>
+                  <Inp label="Fecha de Salida">
+                    {input(formLiq.fechaSalida, v => recalcLiq("fechaSalida", v), { type: "date" })}
+                  </Inp>
+                </div>
+              </Card>
+
+              {/* Desglose */}
+              <Card>
+                <SectionTitle color="#8b0000">📋 Desglose de la Liquidación</SectionTitle>
+
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 10, color: C.muted, fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".08em" }}>Derechos acumulados (siempre aplican)</div>
+                  <LineRow label={`Días trabajados del período (${liq.diasTrabajadosPeriodo} días × ${fmt(liq.valorDia)})`} value={fmt(liq.pagoDiasTrabajados)} />
+                  <LineRow label={`Vacaciones proporcionales (${liq.mesesDesdeAniversario} mes${liq.mesesDesdeAniversario!==1?"es":""})`} value={fmt(liq.vacProporcionales)} />
+                  <LineRow label={`Décimo Tercer Mes proporcional (${liq.mesesDesdeDecimo} mes${liq.mesesDesdeDecimo!==1?"es":""})`} value={fmt(liq.decimoProporcional)} />
+                </div>
+
+                {liq.primaAntigüedad > 0 && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: C.muted, fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".08em" }}>Prima de Antigüedad · Art. 229A CT</div>
+                    <LineRow label="Prima de antigüedad" value={fmt(liq.primaAntigüedad)} color="#2d6e54" />
+                  </div>
+                )}
+
+                {(liq.indemnizacion > 0 || liq.preaviso > 0) && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 10, color: "#8b0000", fontFamily: "monospace", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".08em" }}>Indemnización · Art. 231 CT (Domésticos)</div>
+                    {liq.preaviso > 0 && <LineRow label="Preaviso" value={fmt(liq.preaviso)} color={C.warn} />}
+                    {liq.indemnizacion > 0 && (
+                      <>
+                        <LineRow label={`Indemnización: ${Math.min(liq.anosCompletos + (liq.mesesExtra >= 6 ? 1 : 0), 3)} mes${Math.min(liq.anosCompletos + (liq.mesesExtra >= 6 ? 1 : 0), 3) !== 1 ? "es" : ""} × ${fmt(liq.salarioMensual)}`}
+                          value={fmt(liq.indemnizacion)} color={C.warn} />
+                        <div style={{ fontSize: 11, color: C.muted, fontFamily: "monospace", padding: "4px 0 8px 12px" }}>
+                          Tope legal: 3 meses de salario · {liq.anosCompletos + (liq.mesesExtra >= 6 ? 1 : 0) >= 3 ? "⚠ Tope aplicado" : `${liq.anosCompletos + (liq.mesesExtra >= 6 ? 1 : 0)} años → ${Math.min(liq.anosCompletos + (liq.mesesExtra >= 6 ? 1 : 0), 3)} mes${Math.min(liq.anosCompletos + (liq.mesesExtra >= 6 ? 1 : 0), 3) !== 1 ? "es" : ""}`}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {formLiq.motivo === "renuncia_voluntaria" && (
+                  <div style={{ background: "#f0f9f4", border: `1px solid ${C.border}`, borderRadius: 4, padding: "10px 14px", fontSize: 12, color: C.muted, marginBottom: 10 }}>
+                    ℹ️ Renuncia voluntaria: no genera indemnización ni prima de antigüedad. Solo se pagan los derechos acumulados.
+                  </div>
+                )}
+
+                <div style={{ borderTop: `2px solid ${C.dark}`, paddingTop: 10, display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 16, fontFamily: "monospace" }}>
+                  <span>TOTAL LIQUIDACIÓN</span>
+                  <span style={{ color: C.warn, fontSize: 22 }}>{fmt(liq.totalLiquidacion)}</span>
+                </div>
+              </Card>
+
+              {/* Info legal */}
+              <div style={{ background: "#fff8e1", border: "1px solid #ffe082", borderRadius: 6, padding: "12px 16px", fontSize: 12, color: "#6d5000", lineHeight: 1.7 }}>
+                <strong>⚖️ Base legal — Régimen especial doméstico:</strong><br />
+                · Art. 230–231 Código de Trabajo de Panamá (trabajadores domésticos)<br />
+                · Despido sin causa: 1 mes de salario por año (fracción ≥ 6 meses cuenta), <strong>tope 3 meses</strong><br />
+                · Vacaciones: 30 días por año laborado (proporcional)<br />
+                · Décimo Tercer Mes: proporcional al período desde el último pago (abril, agosto o diciembre)<br />
+                · Plazo de pago: <strong>15 días hábiles</strong> desde la fecha de terminación<br />
+                · Este cálculo es referencial. Consulta MITRADEL o un abogado para tu caso específico.
+              </div>
+            </div>
+          );
+        })()}
+
+
+        {tab === "prestamos" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+              <span style={{ fontSize: 12, color: C.muted }}>{prestamos.filter(p => p.saldo > 0).length} préstamo{prestamos.filter(p => p.saldo > 0).length !== 1 ? "s" : ""} activo{prestamos.filter(p => p.saldo > 0).length !== 1 ? "s" : ""}</span>
+              <Btn onClick={() => { setFormPrest({ ...prestVacio, empleadoId: empleados[0]?.id || "" }); setVerPrest(true); }}>+ Nuevo Préstamo</Btn>
+            </div>
+
+            {verPrest && (
+              <Card style={{ border: `2px solid ${C.accent}` }}>
+                <SectionTitle>Registrar Préstamo</SectionTitle>
+                <div className="g2" style={{ marginBottom: 14 }}>
+                  <Inp label="Empleado">{sel(formPrest.empleadoId, v => setFormPrest(f => ({ ...f, empleadoId: v })),
+                    empleados.map(e => [e.id, e.nombre]))}</Inp>
+                  <Inp label="Fecha">{input(formPrest.fecha, v => setFormPrest(f => ({ ...f, fecha: v })), { type: "date" })}</Inp>
+                </div>
+                <div className="g3" style={{ marginBottom: 14 }}>
+                  <Inp label="Monto Total (USD)">{input(formPrest.monto, v => setFormPrest(f => ({ ...f, monto: v })), { type: "number", placeholder: "0.00", min: "0", step: "0.01" })}</Inp>
+                  <Inp label="Cuota Mensual (USD)">{input(formPrest.cuotaMensual, v => setFormPrest(f => ({ ...f, cuotaMensual: v })), { type: "number", placeholder: "0.00", min: "0", step: "0.01" })}</Inp>
+                  <Inp label="Motivo">{input(formPrest.motivo, v => setFormPrest(f => ({ ...f, motivo: v })), { placeholder: "Ej. Emergencia médica" })}</Inp>
+                </div>
+                {formPrest.monto && formPrest.cuotaMensual && (
+                  <div style={{ fontSize: 12, color: C.accent, background: C.accentLight, padding: "8px 12px", borderRadius: 4, marginBottom: 12 }}>
+                    Se pagaría en aprox. {Math.ceil(parseFloat(formPrest.monto) / parseFloat(formPrest.cuotaMensual))} mes{Math.ceil(parseFloat(formPrest.monto) / parseFloat(formPrest.cuotaMensual)) !== 1 ? "es" : ""}.
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                  <Btn variant="ghost" onClick={() => setVerPrest(false)}>Cancelar</Btn>
+                  <Btn onClick={guardarPrest}>Guardar Préstamo</Btn>
+                </div>
+              </Card>
+            )}
+
+            {prestamos.length === 0 && !verPrest && (
+              <div style={{ textAlign: "center", padding: "50px", color: C.muted }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>💰</div>No hay préstamos registrados
+              </div>
+            )}
+
+            {empleados.map(emp => {
+              const prs = prestamos.filter(p => p.empleadoId === emp.id);
+              if (prs.length === 0) return null;
+              return (
+                <Card key={emp.id}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    {emp.foto ? <img src={emp.foto} style={{ width: 32, height: 32, borderRadius: "50%", objectFit: "cover" }} /> : <span>👤</span>}
+                    <strong>{emp.nombre}</strong>
+                  </div>
+                  {prs.map(p => (
+                    <div key={p.id} style={{ padding: "10px 0", borderTop: `1px dashed ${C.border}` }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 14 }}>{p.motivo || "Préstamo"}</div>
+                          <div style={{ fontSize: 11, color: C.muted }}>Otorgado: {p.fecha} · Monto original: {fmt(p.monto)} · Cuota: {fmt(p.cuotaMensual)}/mes</div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontWeight: 700, fontSize: 16, color: p.saldo > 0 ? C.warn : C.accent }}>
+                            {p.saldo > 0 ? `Saldo: ${fmt(p.saldo)}` : "✓ Pagado"}
+                          </div>
+                          {p.saldo > 0 && <div style={{ fontSize: 11, color: C.muted }}>~{Math.ceil(p.saldo / p.cuotaMensual)} mes{Math.ceil(p.saldo / p.cuotaMensual) !== 1 ? "es" : ""} restantes</div>}
+                        </div>
+                      </div>
+                      {p.saldo > 0 && <div className="vac-bar" style={{ marginTop: 6 }}>
+                        <div className="vac-bar-fill" style={{ width: `${Math.round((1 - p.saldo / p.monto) * 100)}%` }} />
+                      </div>}
+                      {p.saldo > 0 && <div style={{ marginTop: 8 }}>
+                        <Btn small variant="outline" onClick={() => abonarPrest(p.id, Math.min(p.cuotaMensual, p.saldo))}>
+                          Abonar cuota ({fmt(Math.min(p.cuotaMensual, p.saldo))})
+                        </Btn>
+                      </div>}
+                    </div>
+                  ))}
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ══ HISTORIAL ══════════════════════════════════════════════════════ */}
+        {tab === "historial" && (
+          <div>
+            <div style={{ marginBottom: 16, fontSize: 12, color: C.muted }}>{historial.length} pago{historial.length !== 1 ? "s" : ""} registrado{historial.length !== 1 ? "s" : ""}</div>
+            {historial.length === 0 && <div style={{ textAlign: "center", padding: "50px", color: C.muted }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>📄</div>Sin pagos registrados aún
+            </div>}
+            {historial.map(h => (
+              <Card key={h.id}>
+                <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{h.empNombre}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
+                      Q{h.quincena} · {h.mes} {h.año} · {h.metodoPago} · {h.fecha}
+                    </div>
+                    {h.notas && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, fontStyle: "italic" }}>{h.notas}</div>}
+                    {h.adjuntos && h.adjuntos.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                        {h.adjuntos.map((a, i) => (
+                          <img key={i} src={a.data} title={a.nombre}
+                            style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 4, border: `1px solid ${C.border}`, cursor: "pointer" }}
+                            onClick={() => window.open(a.data, "_blank")} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontWeight: 700, fontSize: 20, color: C.accent }}>{fmt(h.netoEmpleado)}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>Costo empleador: {fmt(h.costoTotalEmpleador)}</div>
+                    <div style={{ marginTop: 8 }}>
+                      <Btn small variant="outline" onClick={() => generarPDF(h, h.quincena || "1", h.mes, h.año, h.metodoPago, h.notas || "", h.adjuntos || [])}>
+                        🖨 Re-imprimir
+                      </Btn>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* ══ LEYES / REGLAS ═════════════════════════════════════════════════ */}
+        {tab === "leyes" && (
+          <div>
+            <div style={{ marginBottom: 14, padding: "10px 14px", background: "#fff8e1", border: "1px solid #ffe082", borderRadius: 6, fontSize: 12, color: "#6d5000", fontFamily: "monospace" }}>
+              ✏ Edita cualquier valor. Se guarda automáticamente y aplica a todos los cálculos.
+            </div>
+
+            <Card>
+              <SectionTitle>Salario Mínimo · Decreto Ejecutivo No. 13 (dic. 2025)</SectionTitle>
+              <div className="g2">
+                <Inp label="Región 1 — Ciudad de Panamá, Colón, David… (USD/mes)" hint="Vigente: $340.00">
+                  {input(String(leyes.salarioMinimoR1), v => updLey("salarioMinimoR1", parseFloat(v) || 0), { type: "number", step: "0.01" })}
+                </Inp>
+                <Inp label="Región 2 — Resto del país (USD/mes)" hint="Vigente: $315.00">
+                  {input(String(leyes.salarioMinimoR2), v => updLey("salarioMinimoR2", parseFloat(v) || 0), { type: "number", step: "0.01" })}
+                </Inp>
+              </div>
+            </Card>
+
+            <Card>
+              <SectionTitle>CSS · Caja de Seguro Social · Ley 462 (2025)</SectionTitle>
+              <div className="g2">
+                <Inp label="Aporte Empleador %" hint="13.25% hasta feb 2027 → 14.25% mar 2027 → 15.25% mar 2029">
+                  {input(String(leyes.cssEmpleador), v => updLey("cssEmpleador", parseFloat(v) || 0), { type: "number", step: "0.01" })}
+                </Inp>
+                <Inp label="Aporte Empleado %" hint="9.75% del salario bruto">
+                  {input(String(leyes.cssEmpleado), v => updLey("cssEmpleado", parseFloat(v) || 0), { type: "number", step: "0.01" })}
+                </Inp>
+              </div>
+            </Card>
+
+            <Card>
+              <SectionTitle>Seguro Educativo</SectionTitle>
+              <div className="g2">
+                <Inp label="Empleador %" hint="1.50%">{input(String(leyes.segEduEmpleador), v => updLey("segEduEmpleador", parseFloat(v) || 0), { type: "number", step: "0.01" })}</Inp>
+                <Inp label="Empleado %" hint="1.25%">{input(String(leyes.segEduEmpleado), v => updLey("segEduEmpleado", parseFloat(v) || 0), { type: "number", step: "0.01" })}</Inp>
+              </div>
+            </Card>
+
+            <Card>
+              <SectionTitle>Jornada y Horas Extra · Código de Trabajo de Panamá</SectionTitle>
+              <div className="g3">
+                <Inp label="Horas jornada diurna">{input(String(leyes.horasJornadaDiurna), v => updLey("horasJornadaDiurna", parseFloat(v) || 8), { type: "number" })}</Inp>
+                <Inp label="Recargo horas extra diurnas %" hint="25% = pagan al 125%">{input(String(leyes.horasExtraRecargo), v => updLey("horasExtraRecargo", parseFloat(v) || 0), { type: "number" })}</Inp>
+                <Inp label="Recargo horas extra nocturnas %" hint="50% = pagan al 150%">{input(String(leyes.horasExtraNocturnas), v => updLey("horasExtraNocturnas", parseFloat(v) || 0), { type: "number" })}</Inp>
+              </div>
+            </Card>
+
+            <Card>
+              <SectionTitle>Beneficios Anuales</SectionTitle>
+              <div className="g2">
+                <Inp label="Días de Vacaciones por Año" hint="Panamá: 30 días (Art. 54 CT domésticos)">
+                  {input(String(leyes.vacacionesDias), v => updLey("vacacionesDias", parseFloat(v) || 30), { type: "number" })}
+                </Inp>
+                <Inp label="Décimo Tercer Mes" hint="Obligatorio — Art. 145 Código de Trabajo">
+                  {sel(leyes.decimoTercerMes ? "si" : "no", v => updLey("decimoTercerMes", v === "si"), [
+                    ["si", "Sí — Obligatorio en Panamá"],
+                    ["no", "No incluir en cálculo"]
+                  ])}
+                </Inp>
+              </div>
+            </Card>
+
+            <div style={{ padding: "12px 16px", background: C.accentLight, border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, color: C.muted, lineHeight: 1.7 }}>
+              <strong style={{ color: C.dark }}>Referencias legales vigentes</strong><br />
+              · Salario mínimo doméstico: Decreto Ejecutivo No. 13 del 31 dic. 2025 (MITRADEL)<br />
+              · CSS empleador: 13.25% desde abril 2025 (Ley 462 del 18 mar. 2025)<br />
+              · Décimo Tercer Mes: Art. 145–161 Código de Trabajo de Panamá<br />
+              · Vacaciones: 30 días por año laborado (Art. 54 CT, trabajadores domésticos)<br />
+              · Panamá usa el Balboa (B/.) con paridad 1:1 al dólar estadounidense (USD)
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      <div style={{ textAlign: "center", padding: "20px", fontSize: 10, color: C.muted, fontFamily: "monospace", letterSpacing: ".1em" }}>
+        DATOS GUARDADOS EN TU DISPOSITIVO · DECRETO No.13 · CSS LEY 462 · CÓDIGO DE TRABAJO PANAMÁ
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
