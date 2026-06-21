@@ -1507,10 +1507,11 @@ function calcular() {
   var seg = s * 0.0125;
   var neto = s - css - seg;
   
-  var cssPat = s * 0.1225;
+  var cssPat = s * 0.1325;
   var segPat = s * 0.015;
-  var decimo = s * 0.0833;
-  var total = s + cssPat + segPat + decimo;
+  var decimo = s / 12;
+  var vac = s / 12;
+  var total = s + cssPat + segPat + decimo + vac;
   
   document.getElementById('r-css').textContent = css.toFixed(2);
   document.getElementById('r-segedu').textContent = seg.toFixed(2);
@@ -1796,7 +1797,7 @@ function calcularPago(emp, leyes, prestamos, extraDias, prestamosSkip) {
   const prestEmpleadoTodos = (prestamos || []).filter(p => p.empleadoId === emp.id && p.saldo > 0);
   const prestEmpleado = prestEmpleadoTodos.filter(p => !skipSet.has(p.id));
   const prestEmpleadoSkipped = prestEmpleadoTodos.filter(p => skipSet.has(p.id));
-  const descPrestamo = prestEmpleado.reduce((s, p) => s + Math.min(p.cuotaMensual, p.saldo), 0);
+  const descPrestamo = prestEmpleado.reduce((s, p) => s + Math.min(p.cuotaMensual / 2, p.saldo), 0);
   const netoEmpleado = quincena + pagoHorasEx + pagoHorasExNoc + bonos + pagoDiasLibres - descAusencias - otrosDeduc - descPrestamo;
   const cssPatron = (emp.aplicaCSS !== false) ? pct(salarioMensual, leyes.cssEmpleador) : 0;
   const segEduPatron = (emp.aplicaSegEdu !== false) ? pct(salarioMensual, leyes.segEduEmpleador) : 0;
@@ -1804,7 +1805,9 @@ function calcularPago(emp, leyes, prestamos, extraDias, prestamosSkip) {
   const vacacionesMensual = (salarioMensual / 12) * (leyes.vacacionesDias / 30);
   const costoMensualEmpleador = salarioMensual + cssPatron + segEduPatron + decimoTercerMensual + vacacionesMensual;
   const salMin = emp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2;
-  return { emp, salarioMensual, quincena, pagoHorasEx, pagoHorasExNoc, bonos, descAusencias, pagoDiasLibres, diasLibres, otrosDeduc, descPrestamo, prestEmpleado, prestEmpleadoSkipped, prestEmpleadoTodos, netoEmpleado, cssPatron, segEduPatron, decimoTercerMensual, vacacionesMensual, costoMensualEmpleador, salMin, bajoMinimo: salarioMensual < salMin };
+  return { emp, salarioMensual, quincena, pagoHorasEx, pagoHorasExNoc, bonos, descAusencias, pagoDiasLibres, diasLibres, otrosDeduc, descPrestamo, prestEmpleado, prestEmpleadoSkipped, prestEmpleadoTodos, netoEmpleado, cssPatron, segEduPatron, decimoTercerMensual, vacacionesMensual, costoMensualEmpleador, salMin, bajoMinimo: salarioMensual < salMin,
+    // Alias para las plantillas de recibo/WhatsApp/export (mismos datos, otro nombre)
+    totalHoras: pagoHorasEx + pagoHorasExNoc, totalDiasLibres: pagoDiasLibres, descuentoPrestamo: descPrestamo, totalFeriados: 0 };
 }
 
 function calcularLiquidacion(emp, leyes, motivo, fechaSalida) {
@@ -3759,7 +3762,7 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
     const skips = skipIds || [];
     const data = calcularPago(emp, leyes, prestamos, diasL, skips);
     // Abonar SOLO los préstamos no skippeados (data.prestEmpleado ya los filtra)
-    data.prestEmpleado.forEach(p => abonarPrest(p.id, Math.min(p.cuotaMensual, p.saldo)));
+    data.prestEmpleado.forEach(p => abonarPrest(p.id, Math.min(p.cuotaMensual / 2, p.saldo)));
     const hoyD = new Date();
     const mes = MESES[hoyD.getMonth()];        // "Mayo", igual que el pago normal
     const año = String(hoyD.getFullYear());    // "2026", como string
@@ -3865,7 +3868,7 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
 
   const registrarPago = () => {
     if (!pagoData) return;
-    pagoData.prestEmpleado.forEach(p => abonarPrest(p.id, Math.min(p.cuotaMensual, p.saldo)));
+    pagoData.prestEmpleado.forEach(p => abonarPrest(p.id, Math.min(p.cuotaMensual / 2, p.saldo)));
     const registro = { id: Date.now(), empId: empActivo.id, empNombre: empActivo.nombre, empPuesto: empActivo.puesto, metodoPago, notas: notasPago, correo: correoDestino, fecha: new Date().toLocaleDateString("es-PA"), ...pagoData, mes: reciboMes, año: reciboAno, quincena: quincenaNum, adjuntos: adjuntos.map(a => ({ nombre: a.nombre, data: a.data })), diasLibresPago };
     setHistorial(h => [registro, ...h]);
     setVistaEmp("lista");
@@ -4549,7 +4552,7 @@ ${empleadasHTML}
                   </div>
                   {data.prestEmpleadoTodos.map(p => {
                     const isSkipped = quickPay.skipIds.includes(p.id);
-                    const monto = Math.min(p.cuotaMensual, p.saldo);
+                    const monto = Math.min(p.cuotaMensual / 2, p.saldo);
                     return (
                       <label key={p.id} style={{
                         display: "flex", alignItems: "center", gap: 12,
@@ -6645,7 +6648,7 @@ ${pagos.length > 0 ? `<h3 style="color:#1E40AF;font-size:14px;text-transform:upp
               {pagoData.descAusencias > 0 && <LineRow sub label="Ausencias" value={`− ${fmt(pagoData.descAusencias)}`} color={C.warn} />}
               {(pagoData.prestEmpleadoTodos || []).length > 0 && (pagoData.prestEmpleadoTodos || []).map(p => {
                 const isSkipped = prestSkipIds.includes(p.id);
-                const monto = Math.min(p.cuotaMensual, p.saldo);
+                const monto = Math.min(p.cuotaMensual / 2, p.saldo);
                 return (
                   <div key={p.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px dashed ${C.border}` }}>
                     <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", flex: 1, minWidth: 0 }}>
