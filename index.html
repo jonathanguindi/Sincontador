@@ -1992,6 +1992,7 @@ function AuthScreen({ onAuth }) {
 
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
           {modo === "register" && (
+            <>
             <div>
               <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:6 }}>Tu nombre</label>
               <input value={nombre} onChange={e=>setNombre(e.target.value)} placeholder="Ej. María González" style={iStyle}/>
@@ -2004,6 +2005,7 @@ function AuthScreen({ onAuth }) {
               </div>
               <div style={{ fontSize:11, color:"#6B7B92", marginTop:4 }}>Opcional · Para registrar pagos por WhatsApp</div>
             </div>
+            </>
           )}
           <div>
             <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:6 }}>Correo electrónico</label>
