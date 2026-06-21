@@ -10,13 +10,12 @@
 --   2. En Resend -> API Keys -> crea una API Key y cópiala (empieza con "re_...")
 --   3. Reemplaza abajo:
 --        - TU_RESEND_API_KEY  -> tu API key de Resend
---        - el correo de destino (ya está jonathanguindi12@gmail.com)
+--        - el correo de destino (ya está jonathang@jfkintl.com)
 --   4. Pega TODO este archivo en Supabase -> SQL Editor -> Run
 --
--- Nota: con el remitente "onboarding@resend.dev" Resend te permite enviarte
--- correos A TI MISMO (al correo dueño de la cuenta Resend) sin verificar dominio.
--- Si más adelante quieres enviar a otros correos o con tu propio dominio,
--- verifica un dominio en Resend y cambia el "from".
+-- Nota: el remitente usa el dominio VERIFICADO en Resend (sincontador.app),
+-- por lo que se puede enviar a cualquier correo de destino. El local part
+-- (avisos@) puede ser el que quieras mientras el dominio esté verificado.
 -- =============================================================================
 
 -- 1) Habilitar la extensión que permite hacer llamadas HTTP desde la base de datos
@@ -37,8 +36,8 @@ begin
       'Authorization', 'Bearer TU_RESEND_API_KEY'
     ),
     body    := jsonb_build_object(
-      'from',    'SinContador <onboarding@resend.dev>',
-      'to',      'jonathanguindi12@gmail.com',
+      'from',    'SinContador <avisos@sincontador.app>',
+      'to',      'jonathang@jfkintl.com',
       'subject', '🎉 Nuevo usuario en SinContador',
       'html',
         '<div style="font-family:Arial,sans-serif;font-size:15px;color:#102650">' ||
