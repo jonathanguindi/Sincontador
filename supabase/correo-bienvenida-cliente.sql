@@ -24,6 +24,9 @@ declare
   v_saludo text := case when v_nombre = '' then 'Hola' else 'Hola ' || v_nombre end;
   v_html   text;
 begin
+  -- Si por algún flujo el alta no trae correo, no intentamos enviar.
+  if new.email is null then return new; end if;
+
   v_html :=
   '<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #E0EDFB">'
   || '<div style="background:#102650;padding:28px 32px;text-align:center">'

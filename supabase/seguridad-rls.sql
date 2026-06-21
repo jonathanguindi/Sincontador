@@ -61,6 +61,12 @@ drop policy if exists "profiles_update" on public.profiles;
 create policy "profiles_update" on public.profiles
   for update using ( id = auth.uid() ) with check ( id = auth.uid() );
 
+-- Actualizar perfiles de OTROS solo si eres admin (para el panel admin:
+-- promover usuarios, etc.). El trigger de abajo sigue bloqueando el auto-ascenso.
+drop policy if exists "profiles_update_admin" on public.profiles;
+create policy "profiles_update_admin" on public.profiles
+  for update using ( public.es_admin() ) with check ( public.es_admin() );
+
 -- Evitar que un usuario se ponga is_admin = true a sí mismo desde el navegador.
 -- (Un admin promoviendo a OTRO, o tú desde el SQL Editor, sí pueden.)
 create or replace function public.bloquear_autoascenso_admin()
