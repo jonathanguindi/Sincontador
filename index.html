@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -14,6 +14,29 @@
 <meta property="og:description" content="Pago de empleadas domésticas en Panamá, sin contratar contador. Recibos legales según Decreto 13 y CSS Ley 462." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://sincontador.app" />
+<meta property="og:image" content="https://sincontador.app/og-image.png" />
+<meta property="og:site_name" content="SinContador" />
+<meta property="og:locale" content="es_PA" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="SinContador · La cuenta que sí cuadra" />
+<meta name="twitter:description" content="Pago de empleadas domésticas en Panamá, sin contratar contador. Recibos legales según la ley panameña." />
+<meta name="twitter:image" content="https://sincontador.app/og-image.png" />
+<link rel="canonical" href="https://sincontador.app/" />
+<link rel="icon" type="image/svg+xml" href="/icon.svg" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "Organization", "name": "SinContador", "url": "https://sincontador.app", "description": "Gestión del pago legal de empleadas domésticas en Panamá: recibos, décimo, vacaciones y liquidaciones.", "areaServed": "PA" },
+    { "@type": "FAQPage", "mainEntity": [
+      { "@type": "Question", "name": "¿Para quién es SinContador?", "acceptedAnswer": { "@type": "Answer", "text": "Para cualquier persona en Panamá que tenga empleada doméstica (también niñeras, cocineras, cuidadoras, jardineros) y necesite estar al día con la ley." } },
+      { "@type": "Question", "name": "¿Cómo funcionan los 30 días gratis?", "acceptedAnswer": { "@type": "Answer", "text": "Te registras con tu correo y usas todas las funciones sin restricciones, sin tarjeta de crédito. Al día 30 te avisamos para que elijas plan." } },
+      { "@type": "Question", "name": "¿Cuánto cuesta?", "acceptedAnswer": { "@type": "Answer", "text": "Plan anual $39.99/año o mensual $3.99/mes. Empleadas ilimitadas y todas las funciones incluidas." } },
+      { "@type": "Question", "name": "¿Mis datos están seguros?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. Tu información se guarda encriptada en servidores de Supabase. El escaneo de cédula se procesa en tu dispositivo." } }
+    ] }
+  ]
+}
+</script>
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -919,7 +942,6 @@ body.view-legal { background: #fff; }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 </head>
 <body class="view-landing">
 
@@ -1635,15 +1657,6 @@ async function authHeaders() {
 // ─── STORAGE (cloud per user) ─────────────────────────────────────────────────
 const KEYS = { empleados: "emp_v1", leyes: "leyes_v1", historial: "hist_v1", prestamos: "prest_v1", hijos: "hijos_v1", gastos: "gastos_v1", padres: "padres_v1" };
 
-// ─── CÓDIGOS DE ACCESO HARDCODEADOS ──────────────────────────────────────
-// Para crear/quitar códigos: edita esta lista y vuelve a subir el index.html
-// dias: cuántos días dura el acceso una vez canjeado
-// descripcion: solo para tu referencia interna
-const CODIGOS_ACCESO = {
-  "BH": { dias: 9999, descripcion: "Acceso de por vida" },
-};
-
-
 async function load(key, userId) {
   try {
     const { data } = await supabase.from("user_data").select("value").eq("user_id", userId).eq("key", key).single();
@@ -1980,32 +1993,47 @@ function AuthScreen({ onAuth }) {
 
   const login = async () => {
     setLoading(true); setError("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-    if (error) setError(error.message === "Invalid login credentials" ? "Correo o contraseña incorrectos." : error.message);
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      if (error) setError(error.message === "Invalid login credentials" ? "Correo o contraseña incorrectos." : error.message);
+    } catch (e) {
+      setError("No pudimos conectar. Revisa tu internet e intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const register = async () => {
     if (!nombre.trim()) return setError("Ingresa tu nombre.");
     if (pass.length < 6) return setError("La contraseña debe tener al menos 6 caracteres.");
     setLoading(true); setError("");
-    const { error, data: signUpData } = await supabase.auth.signUp({ email, password: pass, options: { data: { nombre } } });
-    if (!error && signUpData?.user && phone.trim()) {
-      const cleanPhone = "507" + phone.replace(/[^0-9]/g, "").replace(/^507/, "");
-      await supabase.from("profiles").update({ phone: cleanPhone }).eq("id", signUpData.user.id);
+    try {
+      const { error, data: signUpData } = await supabase.auth.signUp({ email, password: pass, options: { data: { nombre } } });
+      if (!error && signUpData?.user && phone.trim()) {
+        const cleanPhone = "507" + phone.replace(/[^0-9]/g, "").replace(/^507/, "");
+        await supabase.from("profiles").update({ phone: cleanPhone }).eq("id", signUpData.user.id);
+      }
+      if (error) setError(error.message);
+      else setMsg("¡Cuenta creada! Ya puedes entrar.");
+    } catch (e) {
+      setError("No pudimos conectar. Revisa tu internet e intenta de nuevo.");
+    } finally {
+      setLoading(false);
     }
-    if (error) setError(error.message);
-    else setMsg("¡Cuenta creada! Ya puedes entrar.");
-    setLoading(false);
   };
 
   const forgot = async () => {
     if (!email.trim()) return setError("Ingresa tu correo primero.");
     setLoading(true); setError("");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: "https://sincontador.app" });
-    if (error) setError(error.message);
-    else setMsg("Te enviamos un correo para restablecer tu contraseña.");
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: "https://sincontador.app" });
+      if (error) setError(error.message);
+      else setMsg("Te enviamos un correo para restablecer tu contraseña.");
+    } catch (e) {
+      setError("No pudimos conectar. Revisa tu internet e intenta de nuevo.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cambiarModo = (m) => { setModo(m); setError(""); setMsg(""); };
