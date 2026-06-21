@@ -8977,10 +8977,14 @@ function Root() {
       if (data) {
         setSuscripcion(data);
       } else {
-        // Crear trial automático de 7 días
+        // Crear trial automático de 30 días.
+        // Fijamos trial_fin explícitamente para no depender del valor
+        // por defecto de la tabla en Supabase.
+        const trialFin = new Date();
+        trialFin.setDate(trialFin.getDate() + 30);
         const { data: nueva } = await supabase
           .from('suscripciones')
-          .insert([{ user_id: userId, plan: 'trial', estado: 'trial' }])
+          .insert([{ user_id: userId, plan: 'trial', estado: 'trial', trial_fin: trialFin.toISOString() }])
           .select()
           .single();
         setSuscripcion(nueva);
