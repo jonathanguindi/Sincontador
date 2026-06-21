@@ -1637,6 +1637,11 @@ calcular();
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
+// 🎁 ACCESO GRATIS PARA TODOS (temporal, hasta activar el pago con tarjeta).
+// Mientras sea true, nadie queda bloqueado por suscripción o prueba vencida,
+// y no se muestra el aviso de "Suscribirse". Para volver a cobrar: ponlo en false.
+const ACCESO_GRATIS_PARA_TODOS = true;
+
 // ─── SUPABASE ─────────────────────────────────────────────────────────────────
 const SUPA_URL = "https://rxmyewcccqencycjqxpe.supabase.co";
 const SUPA_KEY = "sb_publishable_iDG0Rnh9ITAl-f8UczBwxQ_eznWejBL";
@@ -4776,7 +4781,7 @@ ${empleadasHTML}
         {/* BANNER DE TRIAL */}
         {suscripcion && suscripcion.plan === 'trial' && suscripcion.trial_fin && (() => {
           const diasFalta = Math.ceil((new Date(suscripcion.trial_fin) - new Date()) / (1000*60*60*24));
-          if (diasFalta > 0 && diasFalta <= 7) {
+          if (!ACCESO_GRATIS_PARA_TODOS && diasFalta > 0 && diasFalta <= 7) {
             return <div onClick={onVerSuscripcion} style={{ background: diasFalta <= 2 ? "linear-gradient(135deg,#B5451B 0%,#92400E 100%)" : "#102650", color: "#fff", borderRadius: 14, padding: "14px 18px", margin: "16px 0 8px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", boxShadow: "0 4px 12px rgba(0,0,0,.15)" }}>
               <div>
                 <div style={{ fontSize: 11, color: diasFalta <= 2 ? "#FECDD3" : "#9ACDFC", textTransform: "uppercase", letterSpacing: ".08em", fontWeight: 700 }}>Prueba gratis</div>
@@ -9277,7 +9282,8 @@ function Root() {
   const suscripcionActiva = suscripcion.estado === 'activa' && suscripcion.plan !== 'trial';
   
   // Si no tiene suscripción activa ni trial activo, mostrar pantalla de pago
-  if (!suscripcionActiva && !trialActivo) {
+  // (salvo que el acceso gratis para todos esté activado).
+  if (!ACCESO_GRATIS_PARA_TODOS && !suscripcionActiva && !trialActivo) {
     return <SuscripcionScreen user={user} onLogout={logout} suscripcion={suscripcion} onReload={() => cargarSuscripcion(user.id)} />;
   }
 
