@@ -4003,12 +4003,13 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
   const generarHTMLReciboQuincena = (p, emp) => {
     return `
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><style>
-body{font-family:Arial,sans-serif;max-width:600px;margin:20px auto;color:#102650;background:#F7F9FC;padding:20px}
+<html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"><style>
+body{font-family:'Inter',Arial,sans-serif;max-width:600px;margin:20px auto;color:#102650;background:#F7F9FC;padding:20px}
 .header{background:#1E40AF;color:#fff;padding:24px;border-radius:12px 12px 0 0;text-align:center}
 .header h1{margin:0;font-size:24px}
 .header p{margin:8px 0 0;font-size:13px;opacity:.85}
 .box{background:#fff;padding:24px;border:1px solid #DCE7F2;border-radius:0 0 12px 12px}
+@media print{body{font-family:'Inter',Arial,sans-serif}}
 .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #DCE7F2;font-size:14px}
 .row.bold{font-weight:700;font-size:16px;border-top:2px solid #1E40AF;border-bottom:none;padding-top:14px;margin-top:8px;color:#1E40AF}
 .section{margin:20px 0 12px;font-size:13px;font-weight:700;color:#1E40AF;text-transform:uppercase;letter-spacing:.06em}
@@ -4242,8 +4243,8 @@ body{font-family:Arial,sans-serif;max-width:600px;margin:20px auto;color:#102650
     
     const html = `
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Reporte de Casa</title><style>
-body{font-family:Arial,sans-serif;max-width:800px;margin:20px auto;color:#102650;background:#F7F9FC;padding:20px}
+<html><head><meta charset="utf-8"><title>Reporte de Casa</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"><style>
+body{font-family:'Inter',Arial,sans-serif;max-width:800px;margin:20px auto;color:#102650;background:#F7F9FC;padding:20px}
 .header{background:#1E40AF;color:#fff;padding:24px;border-radius:12px;text-align:center;margin-bottom:20px}
 .header h1{margin:0;font-size:26px}
 .header p{margin:8px 0 0;font-size:13px;opacity:.85}
@@ -4252,7 +4253,7 @@ body{font-family:Arial,sans-serif;max-width:800px;margin:20px auto;color:#102650
 .stat .num{font-size:22px;font-weight:800;color:#1E40AF}
 .stat .lbl{font-size:11px;color:#6B7B92;text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
 .footer{text-align:center;padding:20px;font-size:11px;color:#6B7B92;margin-top:20px}
-@media print{body{background:#fff}}
+@media print{body{background:#fff;font-family:'Inter',Arial,sans-serif}}
 </style></head><body>
 <div class="header">
   <h1 style="margin:0;display:inline-flex;align-items:center;gap:10px;justify-content:center"><svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect x="20" y="20" width="10" height="60" rx="5" fill="#FFFFFF"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#FFFFFF"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#FFFFFF"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#FFFFFF"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></svg><span>Reporte de Casa</span></h1>
@@ -4311,7 +4312,7 @@ ${empleadasHTML}
 </div>`;
     }).join("");
     
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F9FC;padding:20px;color:#102650">
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:'Inter',Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F9FC;padding:20px;color:#102650">
 <div style="background:#1E40AF;color:#fff;padding:24px;border-radius:12px;text-align:center;margin-bottom:20px">
   <h1 style="margin:0;display:inline-flex;align-items:center;gap:10px;justify-content:center"><svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><rect x="20" y="20" width="10" height="60" rx="5" fill="#FFFFFF"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#FFFFFF"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#FFFFFF"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#FFFFFF"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></svg><span>Reporte de Casa</span></h1>
   <p style="margin:8px 0 0;opacity:.85">${fechaHoy}</p>
@@ -5539,7 +5540,7 @@ ${empleadasHTML}
             </Card>
             <Card>
               <SectionTitle>Notas</SectionTitle>
-              <textarea value={formEmp.notas} onChange={e => updEmp("notas", e.target.value)} style={{ width: "100%", minHeight: 70, padding: "8px 12px", border: `1.5px solid ${C.border}`, borderRadius: 5, fontFamily: "monospace", fontSize: 13, background: "#F7F9FC", resize: "vertical" }} />
+              <textarea value={formEmp.notas} onChange={e => updEmp("notas", e.target.value)} style={{ width: "100%", minHeight: 80, padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontFamily: "'Inter',sans-serif", fontSize: 13, background: "#F7F9FC", resize: "vertical" }} />
             </Card>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <div>{formEmp.id && <Btn variant="danger" onClick={() => eliminarEmp(formEmp.id)}>Eliminar</Btn>}</div>
@@ -6050,7 +6051,7 @@ body{font-family:'Inter','Helvetica',sans-serif;color:#102650;background:#fff;fo
               </tr>
             `).join("");
             
-            const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F9FC;padding:20px;color:#102650">
+            const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:'Inter',Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F9FC;padding:20px;color:#102650">
 <div style="background:#102650;color:#fff;padding:24px;border-radius:16px;margin-bottom:20px">
   <div style="font-size:11px;letter-spacing:.15em;text-transform:uppercase;opacity:.7">Historial completo</div>
   <h1 style="margin:6px 0 4px;font-size:22px">${emp.nombre}</h1>
@@ -6773,7 +6774,7 @@ ${pagos.length > 0 ? `<h3 style="color:#1E40AF;font-size:14px;text-transform:upp
             </Card>
             <Card>
               <SectionTitle>📝 Notas</SectionTitle>
-              <textarea value={notasPago} onChange={e => setNotasPago(e.target.value)} placeholder="Observaciones..." style={{ width: "100%", minHeight: 60, padding: "8px 12px", border: `1.5px solid ${C.border}`, borderRadius: 5, fontFamily: "monospace", fontSize: 13, background: "#F7F9FC", resize: "vertical" }} />
+              <textarea value={notasPago} onChange={e => setNotasPago(e.target.value)} placeholder="Observaciones..." style={{ width: "100%", minHeight: 80, padding: "10px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontFamily: "'Inter',sans-serif", fontSize: 13, background: "#F7F9FC", resize: "vertical" }} />
             </Card>
             <div style={{ background: C.dark, borderRadius: 8, padding: "18px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
               <div>
@@ -7304,7 +7305,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><label style={{ fontSize: 13, fontWeight: 600, color: "#102650" }}>Vence</label><input type="date" value={formHijo.pasaporteVence||""} onChange={e=>setFormHijo(f=>({...f,pasaporteVence:e.target.value}))} style={{ padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/></div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><label style={{ fontSize: 13, fontWeight: 600, color: "#102650" }}>Colegio</label><input value={formHijo.colegio} onChange={e=>setFormHijo(f=>({...f,colegio:e.target.value}))} placeholder="Instituto Justo Arosemena" style={{ padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/></div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><label style={{ fontSize: 13, fontWeight: 600, color: "#102650" }}>Notas</label><textarea value={formHijo.notas} onChange={e=>setFormHijo(f=>({...f,notas:e.target.value}))} placeholder="Alergias, actividades..." style={{ padding: "10px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 13, fontFamily: "'Inter',sans-serif", minHeight: 60, resize: "vertical", outline: "none" }}/></div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><label style={{ fontSize: 13, fontWeight: 600, color: "#102650" }}>Notas</label><textarea value={formHijo.notas} onChange={e=>setFormHijo(f=>({...f,notas:e.target.value}))} placeholder="Alergias, actividades..." style={{ padding: "10px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 13, fontFamily: "'Inter',sans-serif", minHeight: 80, resize: "vertical", outline: "none" }}/></div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <div>{formHijo.id && <Btn variant="danger" onClick={() => eliminarHijo(formHijo.id)}>Eliminar</Btn>}</div>
@@ -7327,17 +7328,25 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                 const h = hijo || {};
                 const dq = '"';
                 const firmaBox = (nombre, cedula, label) => {
-                  let s = "<div style="+dq+"display:inline-block;width:220px;margin-right:40px;margin-top:40px;vertical-align:top"+dq+">";
-                  s += "<div style="+dq+"border-top:1.5px solid #111;margin-top:60px;padding-top:8px;font-size:13px"+dq+">";
+                  let s = "<div class="+dq+"firma"+dq+">";
+                  s += "<div class="+dq+"firma-line"+dq+">";
                   s += "<strong>"+esc(nombre.toUpperCase())+"</strong>";
-                  if (cedula) s += "<br><span style="+dq+"font-size:12px;color:#555"+dq+">Cédula: "+esc(cedula)+"</span>";
-                  s += "<br><span style="+dq+"font-size:12px;color:#555"+dq+">"+esc(label)+"</span></div></div>";
+                  if (cedula) s += "<br><span style="+dq+"font-size:12px;color:#4A5C75"+dq+">Cédula: "+esc(cedula)+"</span>";
+                  s += "<br><span style="+dq+"font-size:12px;color:#4A5C75"+dq+">"+esc(label)+"</span></div></div>";
                   return s;
                 };
                 let html = "<!DOCTYPE html><html><head><meta charset="+dq+"UTF-8"+dq+"><title>Autorización de Viaje</title>";
-                html += "<style>body{font-family:Georgia,serif;max-width:700px;margin:40px auto;padding:0 40px;color:#111;line-height:1.7;font-size:14px}h1{font-size:18px;text-align:center;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}.sub{text-align:center;font-size:12px;color:#555;margin-bottom:32px}.dato{font-weight:bold}.slabel{font-weight:bold;font-size:12px;text-transform:uppercase;color:#333;margin-top:24px;margin-bottom:6px}@media print{body{margin:20px auto}}</style></head><body>";
+                html += "<link href="+dq+"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"+dq+" rel="+dq+"stylesheet"+dq+">";
+                html += "<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter','Helvetica',sans-serif;color:#102650;background:#fff;line-height:1.7;font-size:14px}.page{max-width:760px;margin:0 auto;padding:50px 50px 40px}.brand-bar{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #102650;padding-bottom:18px;margin-bottom:28px}.brand{display:flex;align-items:center;gap:12px}.brand-icon{width:46px;height:46px;background:#102650;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:7px}.brand-name{font-size:20px;font-weight:900;letter-spacing:.04em;line-height:1}.brand-tagline{font-size:9px;color:#4A5C75;letter-spacing:.18em;text-transform:uppercase;font-weight:700;margin-top:6px}.brand-meta{text-align:right;font-size:10px;color:#6B7B92}.brand-meta strong{display:block;color:#102650;font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}h1{font-size:26px;font-weight:800;color:#102650;letter-spacing:-.02em;line-height:1.15;margin-bottom:6px}.sub{font-size:12px;color:#4A5C75;font-weight:600;margin-bottom:26px}.info-bar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:26px}.info-cell{background:#F4F7FB;border:1px solid #DCE7F2;border-radius:8px;padding:14px 16px}.info-lbl{font-size:9px;color:#6B7B92;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-bottom:4px}.info-val{font-size:14px;color:#102650;font-weight:700}p{margin-bottom:12px}.dato{font-weight:700;color:#102650}.slabel{font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#1E40AF;margin-top:24px;margin-bottom:6px}.firma{display:inline-block;width:230px;margin-right:36px;margin-top:40px;vertical-align:top}.firma-line{border-top:1.5px solid #102650;margin-top:56px;padding-top:8px;font-size:13px}.notario{margin-top:42px;padding:18px 20px;background:#F4F7FB;border:1px solid #DCE7F2;border-radius:10px;min-height:90px}.footer{margin-top:48px;padding-top:16px;border-top:1px solid #DCE7F2;display:flex;justify-content:space-between;font-size:10px;color:#6B7B92}.footer-brand{font-weight:700;color:#102650}@page{margin:0;size:A4}@media print{.page{padding:30px 30px}}</style></head><body><div class="+dq+"page"+dq+">";
+                html += "<div class="+dq+"brand-bar"+dq+"><div class="+dq+"brand"+dq+"><div class="+dq+"brand-icon"+dq+"><svg viewBox="+dq+"0 0 100 100"+dq+" xmlns="+dq+"http://www.w3.org/2000/svg"+dq+" style="+dq+"width:100%;height:100%;display:block"+dq+"><rect x="+dq+"20"+dq+" y="+dq+"20"+dq+" width="+dq+"10"+dq+" height="+dq+"60"+dq+" rx="+dq+"5"+dq+" fill="+dq+"#FFFFFF"+dq+"/><rect x="+dq+"36"+dq+" y="+dq+"20"+dq+" width="+dq+"10"+dq+" height="+dq+"60"+dq+" rx="+dq+"5"+dq+" fill="+dq+"#FFFFFF"+dq+"/><rect x="+dq+"52"+dq+" y="+dq+"20"+dq+" width="+dq+"10"+dq+" height="+dq+"60"+dq+" rx="+dq+"5"+dq+" fill="+dq+"#FFFFFF"+dq+"/><rect x="+dq+"68"+dq+" y="+dq+"20"+dq+" width="+dq+"10"+dq+" height="+dq+"60"+dq+" rx="+dq+"5"+dq+" fill="+dq+"#FFFFFF"+dq+"/><rect x="+dq+"12"+dq+" y="+dq+"44.5"+dq+" width="+dq+"78"+dq+" height="+dq+"11"+dq+" rx="+dq+"5.5"+dq+" fill="+dq+"#9ACDFC"+dq+" transform="+dq+"rotate(-15 51 50)"+dq+"/></svg></div><div><div class="+dq+"brand-name"+dq+"><span style="+dq+"color:#102650"+dq+">SIN</span> <span style="+dq+"color:#1E40AF"+dq+">CONTADOR</span></div><div class="+dq+"brand-tagline"+dq+">La cuenta que sí cuadra</div></div></div><div class="+dq+"brand-meta"+dq+"><strong>Documento</strong>"+new Date().toLocaleDateString('es-PA',{year:'numeric',month:'long',day:'numeric'})+"</div></div>";
                 html += "<h1>Autorización de Viaje de Menor de Edad</h1>";
                 html += "<div class="+dq+"sub"+dq+">República de Panamá · Decreto Ley No. 30 de 2008</div>";
+                html += "<div class="+dq+"info-bar"+dq+">";
+                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">Menor</div><div class="+dq+"info-val"+dq+">"+esc(h.nombre||"—")+"</div></div>";
+                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">Pasaporte</div><div class="+dq+"info-val"+dq+">"+esc(h.pasaporte||"—")+"</div></div>";
+                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">Destino</div><div class="+dq+"info-val"+dq+">"+esc(formCarta.destino||"—")+"</div></div>";
+                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">Fechas</div><div class="+dq+"info-val"+dq+">"+(formCarta.fechaIda?fmtFecha(formCarta.fechaIda):"—")+(formCarta.fechaRegreso?" — "+fmtFecha(formCarta.fechaRegreso):"")+"</div></div>";
+                html += "</div>";
                 // Solo mencionar a quien firma (quien se queda)
                 const tipo2 = formCarta.acompañanteTipo;
                 if (tipo2 === "padre2") {
@@ -7371,8 +7380,9 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                 if (tipo==="padre1") { if (formCarta.padre2Nombre) html += firmaBox(formCarta.padre2Nombre, formCarta.padre2Cedula, p2l); }
                 else if (tipo==="padre2") { html += firmaBox(formCarta.padre1Nombre, formCarta.padre1Cedula, p1l); }
                 else { html += firmaBox(formCarta.padre1Nombre, formCarta.padre1Cedula, p1l); if (formCarta.padre2Nombre) html += firmaBox(formCarta.padre2Nombre, formCarta.padre2Cedula, p2l); }
-                html += "</div><div style="+dq+"margin-top:40px;padding:16px;border:1px solid #ccc;min-height:80px"+dq+"><p style="+dq+"font-size:11px;font-weight:bold;text-transform:uppercase;color:#888"+dq+">Autenticación Notarial</p><p style="+dq+"font-size:12px;color:#aaa"+dq+">Notaría N: ________ Fecha: ________ Tomo: ____ Folio: ____</p></div>";
-                html += "<scr"+"ipt>window.onload=function(){window.print();}</"+"scr"+"ipt></body></html>";
+                html += "</div><div class="+dq+"notario"+dq+"><p class="+dq+"slabel"+dq+" style="+dq+"margin-top:0"+dq+">Autenticación Notarial</p><p style="+dq+"font-size:12px;color:#6B7B92;margin-bottom:0"+dq+">Notaría N: ________ Fecha: ________ Tomo: ____ Folio: ____</p></div>";
+                html += "<div class="+dq+"footer"+dq+"><div><span class="+dq+"footer-brand"+dq+"><span style="+dq+"color:#102650"+dq+">SIN</span> <span style="+dq+"color:#1E40AF"+dq+">CONTADOR</span></span> · Documento generado en sincontador.app</div><div>Decreto Ley No. 30 de 2008</div></div>";
+                html += "</div></body></html>";
                 win.document.write(html); win.document.close();
               };
               return <div>
