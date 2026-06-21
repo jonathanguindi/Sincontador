@@ -89,7 +89,7 @@ begin
     ),
     body    := jsonb_build_object(
       'from',    'SinContador <avisos@sincontador.app>',
-      'to',      'jonathanguindi12@gmail.com',
+      'to',      'jonathang@jfkintl.com',
       'subject', '📊 Reporte diario · SinContador',
       'html',    v_html
     )
