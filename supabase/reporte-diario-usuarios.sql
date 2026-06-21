@@ -88,7 +88,7 @@ begin
       'Authorization', 'Bearer TU_RESEND_API_KEY'
     ),
     body    := jsonb_build_object(
-      'from',    'SinContador <onboarding@resend.dev>',
+      'from',    'SinContador <avisos@sincontador.app>',
       'to',      'jonathanguindi12@gmail.com',
       'subject', '📊 Reporte diario · SinContador',
       'html',    v_html
