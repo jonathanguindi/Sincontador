@@ -3407,7 +3407,7 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
 
     const linea = (lbl, val) => `<tr><td style="padding:6px 0;color:#4A5C75;font-size:12px">${lbl}</td><td style="text-align:right;font-weight:700;color:#102650;font-size:13px">${fmt(val)}</td></tr>`;
 
-    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${esTerminacion ? "Finiquito" : "Finiquito y Recontratación"} — ${emp.nombre}</title>
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${esTerminacion ? "Finiquito" : "Finiquito y Recontratación"} — ${esc(emp.nombre)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -4074,8 +4074,8 @@ body{font-family:Arial,sans-serif;max-width:600px;margin:20px auto;color:#102650
 <div style="background:#fff;border:1px solid #DCE7F2;border-radius:12px;padding:18px;margin-bottom:12px;page-break-inside:avoid">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:2px solid #E0EDFB;padding-bottom:10px">
     <div>
-      <div style="font-size:16px;font-weight:700;color:#1E40AF">${emp.nombre}</div>
-      <div style="font-size:12px;color:#6B7B92">${emp.puesto || "Empleada"} · Región ${emp.region} · ${ant.texto}</div>
+      <div style="font-size:16px;font-weight:700;color:#1E40AF">${esc(emp.nombre)}</div>
+      <div style="font-size:12px;color:#6B7B92">${esc(emp.puesto || "Empleada")} · Región ${esc(emp.region)} · ${ant.texto}</div>
     </div>
     <div style="font-size:18px;font-weight:700;color:#102650">${fmt(parseFloat(emp.salario)||0)}<span style="font-size:11px;color:#6B7B92">/mes</span></div>
   </div>
@@ -4148,8 +4148,8 @@ ${empleadasHTML}
       
       return `<div style="background:#fff;border:1px solid #DCE7F2;border-radius:12px;padding:18px;margin-bottom:12px">
   <div style="border-bottom:2px solid #E0EDFB;padding-bottom:10px;margin-bottom:10px">
-    <div style="font-size:16px;font-weight:700;color:#1E40AF">${emp.nombre}</div>
-    <div style="font-size:12px;color:#6B7B92">${emp.puesto || "Empleada"} · ${ant.texto}</div>
+    <div style="font-size:16px;font-weight:700;color:#1E40AF">${esc(emp.nombre)}</div>
+    <div style="font-size:12px;color:#6B7B92">${esc(emp.puesto || "Empleada")} · ${ant.texto}</div>
   </div>
   <table style="width:100%;font-size:13px"><tr><td style="color:#6B7B92">Salario mensual</td><td style="text-align:right;font-weight:600">${fmt(parseFloat(emp.salario)||0)}</td></tr>
   <tr><td style="color:#6B7B92">Pago quincenal</td><td style="text-align:right;font-weight:600">${fmt(p.netoEmpleado)}</td></tr>
@@ -6805,7 +6805,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
 
   <!-- MUTUO ACUERDO -->
   <div class="clausula">
-    <p class="parrafo primero"><span class="clausula-num">SEGUNDO — TERMINACIÓN:</span> Las partes, de común acuerdo y sin presión alguna, deciden dar por terminada la relación laboral a partir del día <span class="dato">${liq.fechaSalida || fechaHoy}</span>, en virtud de la figura de <strong>terminación por mutuo consentimiento</strong>, conforme a las disposiciones aplicables del Código de Trabajo de la República de Panamá.</p>
+    <p class="parrafo primero"><span class="clausula-num">SEGUNDO — TERMINACIÓN:</span> Las partes, de común acuerdo y sin presión alguna, deciden dar por terminada la relación laboral a partir del día <span class="dato">${esc(liq.fechaSalida || fechaHoy)}</span>, en virtud de la figura de <strong>terminación por mutuo consentimiento</strong>, conforme a las disposiciones aplicables del Código de Trabajo de la República de Panamá.</p>
   </div>
 
   <!-- LIQUIDACIÓN -->
@@ -6849,14 +6849,14 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
   <div class="firmas">
     <div class="firma">
       <div class="firma-linea"></div>
-      <div class="firma-nombre">${nombreUsuario.toUpperCase()}</div>
+      <div class="firma-nombre">${esc(nombreUsuario.toUpperCase())}</div>
       <div class="firma-rol">EMPLEADOR(A)</div>
     </div>
     <div class="firma">
       <div class="firma-linea"></div>
-      <div class="firma-nombre">${emp.nombre.toUpperCase()}</div>
+      <div class="firma-nombre">${esc(emp.nombre.toUpperCase())}</div>
       <div class="firma-rol">EMPLEADO(A)</div>
-      ${emp.cedula ? `<div class="firma-cedula">${emp.documentoTipo || "Cédula"}: ${emp.cedula}</div>` : ""}
+      ${emp.cedula ? `<div class="firma-cedula">${esc(emp.documentoTipo || "Cédula")}: ${esc(emp.cedula)}</div>` : ""}
     </div>
   </div>
 
@@ -7179,9 +7179,9 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                 const firmaBox = (nombre, cedula, label) => {
                   let s = "<div style="+dq+"display:inline-block;width:220px;margin-right:40px;margin-top:40px;vertical-align:top"+dq+">";
                   s += "<div style="+dq+"border-top:1.5px solid #111;margin-top:60px;padding-top:8px;font-size:13px"+dq+">";
-                  s += "<strong>"+nombre.toUpperCase()+"</strong>";
-                  if (cedula) s += "<br><span style="+dq+"font-size:12px;color:#555"+dq+">Cédula: "+cedula+"</span>";
-                  s += "<br><span style="+dq+"font-size:12px;color:#555"+dq+">"+label+"</span></div></div>";
+                  s += "<strong>"+esc(nombre.toUpperCase())+"</strong>";
+                  if (cedula) s += "<br><span style="+dq+"font-size:12px;color:#555"+dq+">Cédula: "+esc(cedula)+"</span>";
+                  s += "<br><span style="+dq+"font-size:12px;color:#555"+dq+">"+esc(label)+"</span></div></div>";
                   return s;
                 };
                 let html = "<!DOCTYPE html><html><head><meta charset="+dq+"UTF-8"+dq+"><title>Autorización de Viaje</title>";
@@ -7192,26 +7192,26 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                 const tipo2 = formCarta.acompañanteTipo;
                 if (tipo2 === "padre2") {
                   // Viaja con Mamá → solo firma Papá
-                  html += "<p><span class="+dq+"dato"+dq+">"+formCarta.padre1Nombre.toUpperCase()+"</span>";
-                  if (formCarta.padre1Cedula) html += ", cédula "+formCarta.padre1Cedula;
+                  html += "<p><span class="+dq+"dato"+dq+">"+esc(formCarta.padre1Nombre.toUpperCase())+"</span>";
+                  if (formCarta.padre1Cedula) html += ", cédula "+esc(formCarta.padre1Cedula);
                 } else if (tipo2 === "padre1") {
                   // Viaja con Papá → solo firma Mamá
-                  html += "<p><span class="+dq+"dato"+dq+">"+formCarta.padre2Nombre.toUpperCase()+"</span>";
-                  if (formCarta.padre2Cedula) html += ", cédula "+formCarta.padre2Cedula;
+                  html += "<p><span class="+dq+"dato"+dq+">"+esc(formCarta.padre2Nombre.toUpperCase())+"</span>";
+                  if (formCarta.padre2Cedula) html += ", cédula "+esc(formCarta.padre2Cedula);
                 } else {
                   // Viaja solo u con otro → firman ambos
-                  html += "<p><span class="+dq+"dato"+dq+">"+formCarta.padre1Nombre.toUpperCase()+"</span>";
-                  if (formCarta.padre1Cedula) html += ", cédula "+formCarta.padre1Cedula;
-                  if (formCarta.padre2Nombre) { html += ", y <span class="+dq+"dato"+dq+">"+formCarta.padre2Nombre.toUpperCase()+"</span>"; if (formCarta.padre2Cedula) html += ", cédula "+formCarta.padre2Cedula; }
+                  html += "<p><span class="+dq+"dato"+dq+">"+esc(formCarta.padre1Nombre.toUpperCase())+"</span>";
+                  if (formCarta.padre1Cedula) html += ", cédula "+esc(formCarta.padre1Cedula);
+                  if (formCarta.padre2Nombre) { html += ", y <span class="+dq+"dato"+dq+">"+esc(formCarta.padre2Nombre.toUpperCase())+"</span>"; if (formCarta.padre2Cedula) html += ", cédula "+esc(formCarta.padre2Cedula); }
                 }
-                html += ", autorizamos al menor <span class="+dq+"dato"+dq+">"+(h.nombre||"[Menor]")+"</span>";
-                if (h.pasaporte) html += " (pasaporte "+h.pasaporte+")";
+                html += ", autorizamos al menor <span class="+dq+"dato"+dq+">"+esc(h.nombre||"[Menor]")+"</span>";
+                if (h.pasaporte) html += " (pasaporte "+esc(h.pasaporte)+")";
                 html += " a viajar";
-                if (formCarta.acompañante) html += " con <span class="+dq+"dato"+dq+">"+formCarta.acompañante.toUpperCase()+"</span>"+(formCarta.acompañanteRelacion?" ("+formCarta.acompañanteRelacion+")":"");
+                if (formCarta.acompañante) html += " con <span class="+dq+"dato"+dq+">"+esc(formCarta.acompañante.toUpperCase())+"</span>"+(formCarta.acompañanteRelacion?" ("+esc(formCarta.acompañanteRelacion)+")":"");
                 else html += " sin acompañante adulto";
-                html += " a <span class="+dq+"dato"+dq+">"+formCarta.destino+"</span>.</p>";
-                if (formCarta.vuelo || formCarta.aerolinea || formCarta.fechaIda) { html += "<p class="+dq+"slabel"+dq+">Detalles del viaje</p><p>"; if (formCarta.aerolinea) html += "Aerolínea: <strong>"+formCarta.aerolinea+"</strong>"; if (formCarta.vuelo) html += (formCarta.aerolinea?" · ":"")+"Vuelo: <strong>"+formCarta.vuelo+"</strong>"; if (formCarta.fechaIda) html += "<br>Salida: <strong>"+fmtFecha(formCarta.fechaIda)+"</strong>"; if (formCarta.fechaRegreso) html += " · Regreso: <strong>"+fmtFecha(formCarta.fechaRegreso)+"</strong>"; html += "</p>"; }
-                if (formCarta.notas) html += "<p class="+dq+"slabel"+dq+">Observaciones</p><p>"+formCarta.notas+"</p>";
+                html += " a <span class="+dq+"dato"+dq+">"+esc(formCarta.destino)+"</span>.</p>";
+                if (formCarta.vuelo || formCarta.aerolinea || formCarta.fechaIda) { html += "<p class="+dq+"slabel"+dq+">Detalles del viaje</p><p>"; if (formCarta.aerolinea) html += "Aerolínea: <strong>"+esc(formCarta.aerolinea)+"</strong>"; if (formCarta.vuelo) html += (formCarta.aerolinea?" · ":"")+"Vuelo: <strong>"+esc(formCarta.vuelo)+"</strong>"; if (formCarta.fechaIda) html += "<br>Salida: <strong>"+fmtFecha(formCarta.fechaIda)+"</strong>"; if (formCarta.fechaRegreso) html += " · Regreso: <strong>"+fmtFecha(formCarta.fechaRegreso)+"</strong>"; html += "</p>"; }
+                if (formCarta.notas) html += "<p class="+dq+"slabel"+dq+">Observaciones</p><p>"+esc(formCarta.notas)+"</p>";
                 const hoy3 = new Date(); const meses3 = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
                 html += "<p style="+dq+"margin-top:24px"+dq+">Esta autorización es otorgada en la ciudad de Panamá a los <strong>"+hoy3.getDate()+" días de "+meses3[hoy3.getMonth()]+" de "+hoy3.getFullYear()+"</strong>.</p>";
                 html += "<div style="+dq+"margin-top:48px"+dq+">";

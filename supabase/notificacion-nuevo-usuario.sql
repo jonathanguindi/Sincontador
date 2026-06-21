@@ -10,7 +10,7 @@
 --   2. En Resend -> API Keys -> crea una API Key y cópiala (empieza con "re_...")
 --   3. Reemplaza abajo:
 --        - TU_RESEND_API_KEY  -> tu API key de Resend
---        - el correo de destino (ya está jonathang@jfkintl.com)
+--        - el correo de destino (ya está jonathanguindi12@gmail.com)
 --   4. Pega TODO este archivo en Supabase -> SQL Editor -> Run
 --
 -- Nota: con el remitente "onboarding@resend.dev" Resend te permite enviarte
@@ -38,7 +38,7 @@ begin
     ),
     body    := jsonb_build_object(
       'from',    'SinContador <onboarding@resend.dev>',
-      'to',      'jonathang@jfkintl.com',
+      'to',      'jonathanguindi12@gmail.com',
       'subject', '🎉 Nuevo usuario en SinContador',
       'html',
         '<div style="font-family:Arial,sans-serif;font-size:15px;color:#102650">' ||
