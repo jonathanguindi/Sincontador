@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>SinContador · Brand Book 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#102650; --azul:#1E40AF; --celeste:#9ACDFC; --celesteLight:#E0EDFB;
+    --bg:#F4F7FB; --bg2:#EFF6FE; --border:#DCE7F2; --muted:#4A5C75; --mutedL:#6B7B92;
+    --warn:#B5451B; --gold:#C37D16; --ok:#16A34A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-family:'Inter',sans-serif;color:var(--navy);background:#fff}
+  .page{
+    width:210mm;min-height:297mm;padding:22mm 20mm;position:relative;
+    page-break-after:always;overflow:hidden;background:#fff;
+  }
+  .page:last-child{page-break-after:auto}
+  .num{position:absolute;bottom:12mm;right:20mm;font-size:10px;color:var(--mutedL);letter-spacing:.1em;font-weight:600}
+  .foot{position:absolute;bottom:12mm;left:20mm;font-size:10px;color:var(--mutedL);letter-spacing:.14em;font-weight:700;text-transform:uppercase}
+  .eyebrow{font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--azul);margin-bottom:14px}
+  h1.title{font-size:42px;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin-bottom:18px}
+  h2.sub{font-size:22px;font-weight:800;margin:26px 0 10px}
+  p.lead{font-size:15px;line-height:1.7;color:var(--muted);max-width:150mm}
+  p.body{font-size:13px;line-height:1.7;color:var(--muted)}
+  .rule{height:4px;width:54px;background:var(--azul);border-radius:4px;margin:0 0 22px}
+
+  /* ---- logo ---- */
+  .logo{display:inline-flex;align-items:center;gap:14px}
+  .logo .mark{filter:drop-shadow(0 6px 18px rgba(16,38,80,.28))}
+  .logo .word{font-size:30px;font-weight:900;letter-spacing:.04em}
+  .logo .word .sin{color:var(--navy)} .logo .word .con{color:var(--azul)}
+  .onnavy .word .sin{color:#fff} .onnavy .word .con{color:var(--celeste)}
+
+  /* ---- cover ---- */
+  .cover{background:
+      radial-gradient(900px 520px at 82% -8%, rgba(154,205,252,.22), transparent),
+      radial-gradient(760px 540px at -5% 115%, rgba(30,64,175,.5), transparent), var(--navy);
+    color:#fff;display:flex;flex-direction:column;justify-content:space-between}
+  .cover .word .sin{color:#fff} .cover .word .con{color:var(--celeste)}
+  .cover h1{font-size:64px;font-weight:900;letter-spacing:-.03em;line-height:1}
+  .cover .tag{font-size:18px;color:var(--celeste);letter-spacing:.04em;margin-top:14px;font-weight:600}
+  .badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(154,205,252,.4);
+    background:rgba(255,255,255,.08);color:var(--celeste);font-size:12px;font-weight:700;
+    letter-spacing:.06em;padding:8px 18px;border-radius:30px;width:fit-content}
+
+  /* ---- swatches ---- */
+  .sw-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+  .sw{border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  .sw .chip{height:74px}
+  .sw .meta{padding:10px 14px}
+  .sw .name{font-size:13px;font-weight:800}
+  .sw .hex{font-size:12px;color:var(--mutedL);font-weight:600;font-variant-numeric:tabular-nums;text-transform:uppercase}
+  .sw small{display:block;font-size:10.5px;color:var(--mutedL);margin-top:2px}
+
+  /* ---- type specimen ---- */
+  .type-row{display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--border);padding:14px 0}
+  .type-row .w{font-size:11px;color:var(--mutedL);width:90px;font-weight:700;letter-spacing:.05em}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+  .card{border:1px solid var(--border);border-radius:16px;padding:18px;background:#fff}
+  .card.fill{background:var(--bg2);border-color:var(--celeste)}
+  .feat{display:flex;gap:12px;align-items:flex-start;padding:9px 0;font-size:13px;color:var(--navy)}
+  .feat .ic{font-size:18px;line-height:1}
+  .do{border-left:4px solid var(--ok)} .dont{border-left:4px solid var(--warn)}
+  .tagi{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.05em;padding:4px 10px;border-radius:20px}
+  .tagok{background:#E7F6EE;color:#15803D} .tagno{background:var(--warnLight,#FFF0EB);color:var(--warn)}
+  .index li{font-size:14px;color:var(--muted);padding:9px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+  .index li b{color:var(--navy);font-weight:700}
+  .quote{font-size:18px;font-weight:700;color:var(--navy);line-height:1.5}
+  .pill{display:inline-block;background:var(--celesteLight);color:var(--azul);font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;margin:3px}
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="page cover">
+  <div class="logo onnavy">
+    <svg class="mark" width="56" height="56" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#fff"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#1E40AF" transform="rotate(-15 51 50)"/></svg>
+    <div class="word"><span class="sin">SIN</span> <span class="con">CONTADOR</span></div>
+  </div>
+  <div>
+    <div class="badge">🇵🇦 HECHO PARA PANAMÁ</div>
+    <h1 style="margin-top:26px">Brand<br>Book</h1>
+    <div class="tag">La cuenta que sí cuadra</div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;color:rgba(255,255,255,.6);font-size:12px;letter-spacing:.1em;font-weight:600">
+    <span>GUÍA DE MARCA · EDICIÓN 2026</span><span>sincontador.app</span>
+  </div>
+</section>
+
+<!-- ============ ÍNDICE ============ -->
+<section class="page">
+  <div class="eyebrow">Contenido</div>
+  <h1 class="title">Índice</h1>
+  <div class="rule"></div>
+  <ul class="index" style="list-style:none;margin-top:10px">
+    <li><b>01 · La marca</b><span>Qué es y para quién</span></li>
+    <li><b>02 · Esencia y valores</b><span>Misión, propósito, personalidad</span></li>
+    <li><b>03 · El logotipo</b><span>Símbolo y significado</span></li>
+    <li><b>04 · Construcción y aire</b><span>Área de protección · tamaño mínimo</span></li>
+    <li><b>05 · Versiones del logo</b><span>Fondos claros, oscuros y mono</span></li>
+    <li><b>06 · Usos incorrectos</b><span>Lo que nunca se debe hacer</span></li>
+    <li><b>07 · Color primario</b><span>Navy, azul y celeste</span></li>
+    <li><b>08 · Color de apoyo</b><span>Fondos y semánticos</span></li>
+    <li><b>09 · Tipografía</b><span>Inter · jerarquía</span></li>
+    <li><b>10 · Estilo visual</b><span>Tarjetas, sombras, botones</span></li>
+    <li><b>11 · Voz y tono</b><span>Cómo habla SinContador</span></li>
+    <li><b>12 · Aplicaciones</b><span>App, documentos y correos</span></li>
+  </ul>
+  <div class="foot">SinContador · Brand Book</div><div class="num">02</div>
+</section>
+
+<!-- ============ 01 LA MARCA ============ -->
+<section class="page">
+  <div class="eyebrow">01 · La marca</div>
+  <h1 class="title">Le quitamos lo complicado<br>a pagar en casa.</h1>
+  <div class="rule"></div>
+  <p class="lead">SinContador es la app panameña para gestionar el pago legal de empleadas domésticas
+  —también niñeras, cocineras, cuidadores y jardineros— <b>sin contratar un contador</b>.
+  Genera recibos legales, calcula décimo y vacaciones, arma liquidaciones y lleva el control de
+  pagos y préstamos. Todo según la ley panameña: Decreto 13, CSS (Ley 462) y el Código de Trabajo.</p>
+
+  <h2 class="sub">¿Para quién es?</h2>
+  <p class="body">Para cualquier familia o persona en Panamá que tenga personal doméstico y quiera estar
+  al día con la ley, sin cuadernos, sin Excel y sin sustos. Gente común, que usa el celular y necesita
+  que las cosas “simplemente cuadren”.</p>
+
+  <div class="grid3" style="margin-top:26px">
+    <div class="card fill"><div style="font-size:24px;font-weight:900;color:var(--navy)">30 días</div><small style="color:var(--muted)">de prueba gratis, sin tarjeta</small></div>
+    <div class="card"><div style="font-size:24px;font-weight:900;color:var(--azul)">$3.99/mes</div><small style="color:var(--muted)">o $39.99 al año</small></div>
+    <div class="card"><div style="font-size:24px;font-weight:900;color:var(--navy)">100%</div><small style="color:var(--muted)">según la ley panameña</small></div>
+  </div>
+  <div class="foot">01 · La marca</div><div class="num">03</div>
+</section>
+
+<!-- ============ 02 ESENCIA ============ -->
+<section class="page">
+  <div class="eyebrow">02 · Esencia y valores</div>
+  <h1 class="title">La cuenta que<br>sí cuadra.</h1>
+  <div class="rule"></div>
+  <div class="grid2" style="margin-top:6px">
+    <div>
+      <h2 class="sub">Misión</h2>
+      <p class="body">Que pagarle a tu empleada de forma legal y correcta sea tan fácil como mandar un mensaje:
+      claro, rápido y sin necesidad de un contador.</p>
+      <h2 class="sub">Propósito</h2>
+      <p class="body">Dar tranquilidad y orden a los hogares panameños, y dignidad y respaldo formal
+      al trabajo doméstico.</p>
+    </div>
+    <div>
+      <h2 class="sub">Personalidad</h2>
+      <div style="margin-top:6px">
+        <span class="pill">Cercana</span><span class="pill">Clara</span><span class="pill">Confiable</span>
+        <span class="pill">Panameña</span><span class="pill">Ordenada</span><span class="pill">Sin rodeos</span>
+      </div>
+      <h2 class="sub">Promesa</h2>
+      <p class="body">Cada pago queda registrado en un PDF formal. Olvídate de “ya te pagué pero no
+      tengo prueba”. Con SinContador, tu hogar en orden, sin complicaciones.</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:24px;background:var(--navy);border:none;color:#fff">
+    <div class="quote" style="color:#fff">“Cuesta menos que un café al mes y te ahorra los dolores de cabeza de cada quincena.”</div>
+  </div>
+  <div class="foot">02 · Esencia y valores</div><div class="num">04</div>
+</section>
+
+<!-- ============ 03 LOGO ============ -->
+<section class="page">
+  <div class="eyebrow">03 · El logotipo</div>
+  <h1 class="title">El logotipo</h1>
+  <div class="rule"></div>
+  <div class="grid2" style="align-items:center;margin-top:10px">
+    <div style="text-align:center">
+      <svg width="180" height="180" viewBox="0 0 100 100" style="filter:drop-shadow(0 12px 30px rgba(16,38,80,.25))"><rect width="100" height="100" rx="22" fill="#102650"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></svg>
+    </div>
+    <div>
+      <h2 class="sub" style="margin-top:0">El símbolo</h2>
+      <p class="body">Cuatro barras blancas como las <b>marcas de conteo</b> (la cuenta que se lleva a mano),
+      cruzadas por una <b>línea diagonal celeste</b> —el quinto trazo que “cierra y cuadra” la cuenta—.
+      Es la idea central de la marca: llevar la cuenta, clara y completa.</p>
+      <h2 class="sub">El logotipo completo</h2>
+      <div class="logo" style="margin-top:8px"><svg width="40" height="40" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#102650"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></svg><div class="word"><span class="sin">SIN</span> <span class="con">CONTADOR</span></div></div>
+      <p class="body" style="margin-top:12px">“SIN” en navy y “CONTADOR” en azul, en mayúsculas Inter Black con leve espaciado.
+      Acompañado del descriptor <i>La cuenta que sí cuadra</i>.</p>
+    </div>
+  </div>
+  <div class="foot">03 · El logotipo</div><div class="num">05</div>
+</section>
+
+<!-- ============ 04 CONSTRUCCIÓN ============ -->
+<section class="page">
+  <div class="eyebrow">04 · Construcción y aire</div>
+  <h1 class="title">Aire y tamaño mínimo</h1>
+  <div class="rule"></div>
+  <div class="grid2" style="align-items:center">
+    <div style="text-align:center;border:1px dashed var(--celeste);border-radius:16px;padding:30px;background:var(--bg2)">
+      <div style="display:inline-block;outline:14px solid rgba(30,64,175,.12);outline-offset:0;border-radius:22px">
+        <svg width="120" height="120" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#102650"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></svg>
+      </div>
+      <p class="body" style="margin-top:14px">Área de protección = el ancho de una barra del símbolo, en los cuatro lados.</p>
+    </div>
+    <div>
+      <h2 class="sub" style="margin-top:0">Área de protección</h2>
+      <p class="body">Mantén siempre un espacio libre alrededor del logo, equivalente al grosor de una de
+      sus barras. Nada (texto, imágenes, bordes) debe invadir esa zona.</p>
+      <h2 class="sub">Tamaño mínimo</h2>
+      <p class="body">Para que el símbolo se lea bien:</p>
+      <div class="feat">📱 <b>Digital:</b> &nbsp;mínimo 24 px de alto el símbolo.</div>
+      <div class="feat">🖨️ <b>Impreso:</b> &nbsp;mínimo 8 mm de alto el símbolo.</div>
+      <p class="body" style="margin-top:10px">Por debajo de eso, usa solo el símbolo (sin texto).</p>
+    </div>
+  </div>
+  <div class="foot">04 · Construcción y aire</div><div class="num">06</div>
+</section>
+
+<!-- ============ 05 VERSIONES ============ -->
+<section class="page">
+  <div class="eyebrow">05 · Versiones del logo</div>
+  <h1 class="title">Versiones</h1>
+  <div class="rule"></div>
+  <div class="grid3" style="margin-top:8px">
+    <div class="card" style="text-align:center"><svg width="64" height="64" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#102650"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></svg><div style="font-size:11px;color:var(--mutedL);margin-top:10px;font-weight:700">PRINCIPAL · sobre claro</div></div>
+    <div class="card" style="text-align:center;background:var(--navy);border:none"><svg width="64" height="64" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#fff"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#1E40AF" transform="rotate(-15 51 50)"/></svg><div style="font-size:11px;color:var(--celeste);margin-top:10px;font-weight:700">SOBRE NAVY</div></div>
+    <div class="card" style="text-align:center"><svg width="64" height="64" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#102650"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#fff" transform="rotate(-15 51 50)"/></svg><div style="font-size:11px;color:var(--mutedL);margin-top:10px;font-weight:700">MONOCROMO</div></div>
+  </div>
+  <p class="body" style="margin-top:22px">Usa la versión <b>principal</b> sobre fondos claros (#fff, #F4F7FB, #EFF6FE). Sobre fondos
+  navy o fotografías oscuras, usa la versión invertida. La versión monocroma se reserva para una sola
+  tinta (sellos, grabados, fax/legal). El símbolo nunca cambia de proporciones ni de ángulo del trazo (−15°).</p>
+  <div class="foot">05 · Versiones del logo</div><div class="num">07</div>
+</section>
+
+<!-- ============ 06 USOS INCORRECTOS ============ -->
+<section class="page">
+  <div class="eyebrow">06 · Usos incorrectos</div>
+  <h1 class="title">Lo que nunca se hace</h1>
+  <div class="rule"></div>
+  <div class="grid2" style="gap:14px;margin-top:6px">
+    <div class="card dont"><span class="tagi tagno">✕ NO</span><p class="body" style="margin-top:8px">Cambiar los colores del logo o usar tonos fuera de la paleta.</p></div>
+    <div class="card dont"><span class="tagi tagno">✕ NO</span><p class="body" style="margin-top:8px">Deformar, estirar, rotar o inclinar el logotipo.</p></div>
+    <div class="card dont"><span class="tagi tagno">✕ NO</span><p class="body" style="margin-top:8px">Cambiar la tipografía del nombre o reescribirlo (“Sincontador”, “Sin-Contador”).</p></div>
+    <div class="card dont"><span class="tagi tagno">✕ NO</span><p class="body" style="margin-top:8px">Ponerlo sobre fondos sin contraste o imágenes muy cargadas.</p></div>
+    <div class="card dont"><span class="tagi tagno">✕ NO</span><p class="body" style="margin-top:8px">Agregar sombras, contornos o efectos al símbolo.</p></div>
+    <div class="card do"><span class="tagi tagok">✓ SÍ</span><p class="body" style="margin-top:8px">Respeta proporciones, colores oficiales, el aire mínimo y el ángulo del trazo celeste.</p></div>
+  </div>
+  <div class="foot">06 · Usos incorrectos</div><div class="num">08</div>
+</section>
+
+<!-- ============ 07 COLOR PRIMARIO ============ -->
+<section class="page">
+  <div class="eyebrow">07 · Color primario</div>
+  <h1 class="title">Paleta principal</h1>
+  <div class="rule"></div>
+  <p class="body" style="margin-bottom:16px">El navy manda; el azul es la acción; el celeste acompaña y decora (úsalo sobre fondos oscuros).</p>
+  <div class="sw-grid">
+    <div class="sw"><div class="chip" style="background:#102650"></div><div class="meta"><div class="name">Navy</div><div class="hex">#102650</div><small>Color principal · textos, fondos de marca, logo</small></div></div>
+    <div class="sw"><div class="chip" style="background:#1E40AF"></div><div class="meta"><div class="name">Azul</div><div class="hex">#1E40AF</div><small>Acción · botones, enlaces, datos destacados</small></div></div>
+    <div class="sw"><div class="chip" style="background:#9ACDFC"></div><div class="meta"><div class="name">Celeste</div><div class="hex">#9ACDFC</div><small>Acento sobre navy · trazo del logo, detalles</small></div></div>
+    <div class="sw"><div class="chip" style="background:#E0EDFB"></div><div class="meta"><div class="name">Celeste claro</div><div class="hex">#E0EDFB</div><small>Fondos suaves, chips, estados activos</small></div></div>
+  </div>
+  <div class="card" style="margin-top:18px;background:var(--bg2);border-color:var(--celeste)">
+    <p class="body"><b>Contraste:</b> el celeste #9ACDFC <u>no</u> debe usarse como texto sobre blanco
+    (se lee mal). Para texto sobre fondos claros, usa siempre azul #1E40AF o navy #102650.</p>
+  </div>
+  <div class="foot">07 · Color primario</div><div class="num">09</div>
+</section>
+
+<!-- ============ 08 COLOR APOYO ============ -->
+<section class="page">
+  <div class="eyebrow">08 · Color de apoyo</div>
+  <h1 class="title">Fondos y semánticos</h1>
+  <div class="rule"></div>
+  <h2 class="sub" style="margin-top:4px">Fondos neutros</h2>
+  <div class="sw-grid">
+    <div class="sw"><div class="chip" style="background:#F4F7FB;border-bottom:1px solid var(--border)"></div><div class="meta"><div class="name">Fondo app</div><div class="hex">#F4F7FB</div></div></div>
+    <div class="sw"><div class="chip" style="background:#EFF6FE;border-bottom:1px solid var(--border)"></div><div class="meta"><div class="name">Fondo suave</div><div class="hex">#EFF6FE</div></div></div>
+    <div class="sw"><div class="chip" style="background:#FFFFFF;border-bottom:1px solid var(--border)"></div><div class="meta"><div class="name">Tarjetas</div><div class="hex">#FFFFFF</div></div></div>
+    <div class="sw"><div class="chip" style="background:#DCE7F2"></div><div class="meta"><div class="name">Bordes</div><div class="hex">#DCE7F2</div></div></div>
+  </div>
+  <h2 class="sub">Semánticos</h2>
+  <div class="sw-grid">
+    <div class="sw"><div class="chip" style="background:#16A34A"></div><div class="meta"><div class="name">Éxito</div><div class="hex">#16A34A</div><small>Confirmaciones, pago realizado</small></div></div>
+    <div class="sw"><div class="chip" style="background:#B5451B"></div><div class="meta"><div class="name">Alerta</div><div class="hex">#B5451B</div><small>Errores, deducciones, liquidación</small></div></div>
+    <div class="sw"><div class="chip" style="background:#C37D16"></div><div class="meta"><div class="name">Dorado</div><div class="hex">#C37D16</div><small>Avisos legales, antigüedad</small></div></div>
+    <div class="sw"><div class="chip" style="background:#25D366"></div><div class="meta"><div class="name">WhatsApp</div><div class="hex">#25D366</div><small>Solo para acciones de WhatsApp</small></div></div>
+  </div>
+  <div class="foot">08 · Color de apoyo</div><div class="num">10</div>
+</section>
+
+<!-- ============ 09 TIPOGRAFÍA ============ -->
+<section class="page">
+  <div class="eyebrow">09 · Tipografía</div>
+  <h1 class="title">Inter</h1>
+  <div class="rule"></div>
+  <p class="body">Inter es la única tipografía de la marca: moderna, clara y excelente en pantalla y en
+  números. En documentos legales largos (cartas), se admite una serif sobria para el cuerpo.</p>
+  <div style="margin-top:10px">
+    <div class="type-row"><span class="w">Black · 900</span><span style="font-weight:900;font-size:30px;letter-spacing:-.02em">La cuenta que sí cuadra</span></div>
+    <div class="type-row"><span class="w">Bold · 700</span><span style="font-weight:700;font-size:24px">Recibos legales en segundos</span></div>
+    <div class="type-row"><span class="w">Semibold · 600</span><span style="font-weight:600;font-size:19px">Décimo, vacaciones y liquidaciones</span></div>
+    <div class="type-row"><span class="w">Medium · 500</span><span style="font-weight:500;font-size:16px">Gestiona el pago de tu empleada doméstica.</span></div>
+    <div class="type-row"><span class="w">Regular · 400</span><span style="font-weight:400;font-size:15px;color:var(--muted)">Texto de párrafo y descripciones de apoyo en la interfaz.</span></div>
+  </div>
+  <div class="card" style="margin-top:18px"><p class="body"><b>Números:</b> usa <i>tabular-nums</i> en tablas y montos para que las cifras queden alineadas.
+  Montos siempre con formato de moneda: <b style="font-variant-numeric:tabular-nums">$1,925.00</b>.</p></div>
+  <div class="foot">09 · Tipografía</div><div class="num">11</div>
+</section>
+
+<!-- ============ 10 ESTILO VISUAL ============ -->
+<section class="page">
+  <div class="eyebrow">10 · Estilo visual</div>
+  <h1 class="title">Componentes</h1>
+  <div class="rule"></div>
+  <div class="grid2" style="align-items:flex-start">
+    <div>
+      <h2 class="sub" style="margin-top:0">Tarjetas</h2>
+      <div class="card" style="box-shadow:0 16px 40px rgba(16,38,80,.08)"><div style="font-weight:800">Próxima quincena</div><div style="font-size:28px;font-weight:900;color:var(--navy);margin-top:4px">$847.50</div><div style="font-size:12px;color:var(--mutedL)">15 de mayo · en 6 días</div></div>
+      <p class="body" style="margin-top:10px">Esquinas redondeadas (16–20px), borde #DCE7F2 y sombra suave y difusa. Nada de bordes duros.</p>
+    </div>
+    <div>
+      <h2 class="sub" style="margin-top:0">Botones</h2>
+      <div style="background:var(--navy);color:#fff;text-align:center;padding:13px;border-radius:10px;font-weight:700;font-size:14px">Acción principal</div>
+      <div style="background:var(--bg2);color:var(--azul);text-align:center;padding:12px;border-radius:10px;font-weight:600;font-size:14px;border:1.5px solid var(--celeste);margin-top:10px">Acción secundaria</div>
+      <p class="body" style="margin-top:10px">Altura táctil cómoda (mín. 44px), transición suave, y un leve realce al pasar el cursor.</p>
+      <h2 class="sub">Radios &amp; sombra</h2>
+      <p class="body">Radio botones 10px · tarjetas 16–20px · sombra <i>0 16px 40px rgba(16,38,80,.08)</i>.</p>
+    </div>
+  </div>
+  <div class="foot">10 · Estilo visual</div><div class="num">12</div>
+</section>
+
+<!-- ============ 11 VOZ Y TONO ============ -->
+<section class="page">
+  <div class="eyebrow">11 · Voz y tono</div>
+  <h1 class="title">Cómo hablamos</h1>
+  <div class="rule"></div>
+  <p class="body">Hablamos claro, cercano y panameño. Sin tecnicismos ni letra chiquita. Como un amigo
+  que sabe de leyes laborales y te lo explica fácil.</p>
+  <div class="grid2" style="margin-top:16px;gap:14px">
+    <div class="card do"><div style="font-size:11px;font-weight:800;color:#15803D;letter-spacing:.05em">ASÍ SÍ</div>
+      <p class="body" style="margin-top:8px">“Cuesta menos que un café al mes.”<br>“Tu hogar en orden, sin complicaciones.”<br>“Todo según la ley panameña.”</p></div>
+    <div class="card dont"><div style="font-size:11px;font-weight:800;color:var(--warn);letter-spacing:.05em">ASÍ NO</div>
+      <p class="body" style="margin-top:8px">“Plataforma de gestión integral de obligaciones patronales.”<br>“Optimice su compliance laboral.”</p></div>
+  </div>
+  <h2 class="sub">Principios</h2>
+  <div class="feat">✅ <b>Claro antes que técnico</b> — si una palabra no la usa una familia, no la usamos.</div>
+  <div class="feat">🤝 <b>Cercano y de tú</b> — hablamos de “tu empleada”, “tu hogar”.</div>
+  <div class="feat">⚖️ <b>Confiable</b> — citamos la ley (Decreto 13, CSS Ley 462) para dar respaldo, no para asustar.</div>
+  <div class="feat">🇵🇦 <b>Panameño</b> — hecho para Panamá, con su realidad y sus términos.</div>
+  <div class="foot">11 · Voz y tono</div><div class="num">13</div>
+</section>
+
+<!-- ============ 12 APLICACIONES ============ -->
+<section class="page">
+  <div class="eyebrow">12 · Aplicaciones</div>
+  <h1 class="title">La marca en acción</h1>
+  <div class="rule"></div>
+  <div class="grid2" style="align-items:flex-start;gap:18px">
+    <div>
+      <h2 class="sub" style="margin-top:0">La app</h2>
+      <p class="body">Fondo claro (#F4F7FB), tarjetas blancas, navy para títulos y azul para acciones.
+      Lo que hace, en orden:</p>
+      <div class="feat">🧾 Recibos de pago legales en PDF</div>
+      <div class="feat">📅 Décimo tercer mes automático</div>
+      <div class="feat">🏖️ Vacaciones proporcionales</div>
+      <div class="feat">📄 Liquidaciones y cartas legales</div>
+      <div class="feat">💳 Préstamos y adelantos</div>
+      <div class="feat">🆔 Escaneo de cédula (OCR)</div>
+      <div class="feat">📲 Envío por WhatsApp</div>
+    </div>
+    <div>
+      <h2 class="sub" style="margin-top:0">Documentos y correos</h2>
+      <p class="body">Todo documento lleva la <b>barra de marca</b> (logo + nombre + borde navy 3px),
+      tablas con encabezado navy, totales en caja destacada y bloque de firmas. Tipografía Inter
+      (serif sobria solo en cartas legales).</p>
+      <div class="card" style="margin-top:10px;padding:0;overflow:hidden">
+        <div style="background:var(--navy);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px">
+          <svg width="22" height="22" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#fff"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#1E40AF" transform="rotate(-15 51 50)"/></svg>
+          <span style="font-weight:800;font-size:13px;letter-spacing:.04em">SIN CONTADOR</span><span style="margin-left:auto;font-size:10px;color:var(--celeste)">RECIBO</span>
+        </div>
+        <div style="padding:12px 14px;font-size:12px;color:var(--muted)">Salario quincenal · horas extra · deducciones<br><b style="color:var(--navy)">TOTAL A PAGAR &nbsp;$311.50</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">12 · Aplicaciones</div><div class="num">14</div>
+</section>
+
+<!-- ============ CIERRE ============ -->
+<section class="page cover" style="justify-content:center;align-items:center;text-align:center">
+  <div>
+    <svg width="80" height="80" viewBox="0 0 100 100" style="filter:drop-shadow(0 12px 30px rgba(0,0,0,.4))"><rect width="100" height="100" rx="22" fill="#fff"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#1E40AF" transform="rotate(-15 51 50)"/></svg>
+    <div class="word" style="font-size:30px;font-weight:900;letter-spacing:.04em;margin-top:18px"><span style="color:#fff">SIN</span> <span style="color:var(--celeste)">CONTADOR</span></div>
+    <div class="tag" style="margin-top:10px">La cuenta que sí cuadra</div>
+    <p style="color:rgba(255,255,255,.65);font-size:12px;margin-top:34px;letter-spacing:.1em">sincontador.app · soporte@sincontador.app</p>
+    <p style="color:rgba(255,255,255,.4);font-size:10px;margin-top:8px;letter-spacing:.14em">DECRETO No.13 · CSS LEY 462 · CÓDIGO DE TRABAJO PANAMÁ</p>
+  </div>
+</section>
+
+</body>
+</html>
