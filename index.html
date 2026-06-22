@@ -7681,15 +7681,34 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                       <div style={{ fontSize: 12, color: C.muted }}>Decreto Ley No. 30 de 2008</div>
                     </div>
                     <div style={{ fontSize: 14, color: "#111", lineHeight: 1.8 }}>
-                      <p>
-                        {(formCarta.acompañanteTipo !== "padre1" && formCarta.acompañanteTipo !== "padre2" && formCarta.padre2Nombre) ? "Nosotros, " : "Yo, "}
-                        {formCarta.acompañanteTipo === "padre2"
-                          ? <><strong>{formCarta.padre1Nombre.toUpperCase()}</strong>{formCarta.padre1Cedula?", cédula "+formCarta.padre1Cedula:""}</>
-                          : formCarta.acompañanteTipo === "padre1"
-                          ? <><strong>{formCarta.padre2Nombre.toUpperCase()}</strong>{formCarta.padre2Cedula?", cédula "+formCarta.padre2Cedula:""}</>
-                          : <><strong>{formCarta.padre1Nombre.toUpperCase()}</strong>{formCarta.padre1Cedula?", cédula "+formCarta.padre1Cedula:""}{formCarta.padre2Nombre?", y "+formCarta.padre2Nombre.toUpperCase()+(formCarta.padre2Cedula?", cédula "+formCarta.padre2Cedula:""):""}</>
-                        }{", "}{(formCarta.acompañanteTipo !== "padre1" && formCarta.acompañanteTipo !== "padre2" && formCarta.padre2Nombre) ? "autorizamos" : "autorizo"} {menoresSel.length>1?"a los menores ":"al menor "}<strong>{menoresSel.map(m=>m.nombre).join(", ").replace(/,([^,]*)$/, " y$1")}</strong> a viajar{formCarta.acompañante?" con "+formCarta.acompañante:" sin acompañante adulto"} a <strong>{formCarta.destino}</strong>.</p>
-                      {formCarta.fechaIda && <p style={{ marginTop: 12 }}>{formCarta.aerolinea&&<><strong>{formCarta.aerolinea}</strong> · </>}{formCarta.vuelo&&<>Vuelo <strong>{formCarta.vuelo}</strong> · </>}Salida <strong>{fmtFecha(formCarta.fechaIda)}</strong>{formCarta.fechaRegreso&&<> · Regreso <strong>{fmtFecha(formCarta.fechaRegreso)}</strong></>}</p>}
+                      {(() => {
+                        const f = formCarta, tipo = f.acompañanteTipo;
+                        const g1 = padres.padre1.genero==="F"?"F":"M", g2 = padres.padre2.genero==="F"?"F":"M";
+                        const rolDe = g => g==="F"?"Madre":"Padre";
+                        let firmantes = [], compania = "";
+                        if (tipo==="padre1") { firmantes=[{n:f.padre2Nombre,c:f.padre2Cedula,g:g2}]; compania="en compañía de "+(g1==="F"?"su madre ":"su padre ")+f.padre1Nombre+(f.padre1Cedula?" con C.I.P. No. "+f.padre1Cedula:""); }
+                        else if (tipo==="padre2") { firmantes=[{n:f.padre1Nombre,c:f.padre1Cedula,g:g1}]; compania="en compañía de "+(g2==="F"?"su madre ":"su padre ")+f.padre2Nombre+(f.padre2Cedula?" con C.I.P. No. "+f.padre2Cedula:""); }
+                        else { firmantes=[{n:f.padre1Nombre,c:f.padre1Cedula,g:g1}]; if(f.padre2Nombre) firmantes.push({n:f.padre2Nombre,c:f.padre2Cedula,g:g2}); if(tipo==="otro"&&f.acompañante) compania="en compañía de "+f.acompañante+(f.acompañanteRelacion?" ("+f.acompañanteRelacion+")":"")+(f.acompañantePasaporte?" con documento No. "+f.acompañantePasaporte:""); else compania="sin compañía de un adulto"; }
+                        const dos = firmantes.length>1, nH = menoresSel.length;
+                        const rolFirmantes = dos?"Padres Legales":(rolDe(firmantes[0].g)+" Legal");
+                        const allF = nH?menoresSel.every(m=>(m.genero||"F")==="F"):true;
+                        const hijoWord = nH===1?((menoresSel[0]&&(menoresSel[0].genero||"F")==="F")?"hija":"hijo"):(allF?"hijas":"hijos");
+                        const posesivo = dos?(nH===1?(hijoWord==="hija"?"nuestra":"nuestro"):(allF?"nuestras":"nuestros")):(nH===1?"mi":"mis");
+                        const hijosFrase = posesivo+" "+hijoWord;
+                        const firmTxt = firmantes.map(s=>s.n+(s.c?" con C.I.P. No. "+s.c:"")).join(", y ");
+                        const vIda = f.vuelo?("en el vuelo "+(f.aerolinea?"de "+f.aerolinea+" ":"")+"No. "+f.vuelo):"";
+                        const vReg = f.vueloRegreso?("en el vuelo "+(f.aerolinea?"de "+f.aerolinea+" ":"")+"No. "+f.vueloRegreso):"";
+                        const fIda = f.fechaIda?fmtFecha(f.fechaIda):"", fReg = f.fechaRegreso?fmtFecha(f.fechaRegreso):"";
+                        let s = "Por este medio, "+(dos?"Nosotros, ":"Yo, ")+firmTxt+", actuando como "+rolFirmantes+" de "+hijosFrase+", "+(dos?"autorizamos":"autorizo")+" que "+(nH===1?"viaje":"viajen")+" "+compania;
+                        if(vIda) s+=" "+vIda;
+                        if(f.destino) s+=" con destino a "+f.destino;
+                        if(fIda) s+=" el día "+fIda;
+                        if(fReg&&vReg) s+=", retornando a Panamá el "+fReg+" "+vReg;
+                        else if(fReg) s+=", retornando a Panamá el "+fReg;
+                        else if(vReg) s+=", retornando a Panamá "+vReg;
+                        s+=".";
+                        return <p>{s}</p>;
+                      })()}
                       {menoresSel.length>0 && <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 14, fontSize: 12 }}>
                         <thead><tr style={{ background: "#102650", color: "#fff" }}><th style={{ textAlign: "left", padding: "7px 9px" }}>Menor</th><th style={{ textAlign: "left", padding: "7px 9px" }}>Edad</th><th style={{ textAlign: "left", padding: "7px 9px" }}>Cédula</th><th style={{ textAlign: "left", padding: "7px 9px" }}>Pasaporte</th></tr></thead>
                         <tbody>{menoresSel.map(m => { const ed = m.fechaNacimiento ? (() => { const h2=new Date(),nc=new Date(m.fechaNacimiento); let a=h2.getFullYear()-nc.getFullYear(); if(h2<new Date(h2.getFullYear(),nc.getMonth(),nc.getDate()))a--; return a+(a===1?" año":" años"); })() : "—"; return <tr key={m.id} style={{ borderBottom: "1px solid #E8F0EA" }}><td style={{ padding: "7px 9px", fontWeight: 600 }}>{m.nombre}</td><td style={{ padding: "7px 9px" }}>{ed}</td><td style={{ padding: "7px 9px", color: m.cedula?"#102650":"#B5451B" }}>{m.cedula||"falta"}</td><td style={{ padding: "7px 9px", color: m.pasaporte?"#102650":"#B5451B" }}>{m.pasaporte||"falta"}</td></tr>; })}</tbody>
