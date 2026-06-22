@@ -1694,6 +1694,34 @@ const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&
 const pct = (b, p) => (b * p) / 100;
 const hoy = () => new Date().toISOString().split("T")[0];
 
+// Comprime/redimensiona una imagen antes de guardarla. Evita crashes de memoria
+// en iPad/iPhone al tomar fotos a resolución completa (12MP) y excederse de cuota.
+function comprimirImagen(file, maxLado, callback) {
+  try {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+          if (w > maxLado || h > maxLado) {
+            if (w >= h) { h = Math.round(h * maxLado / w); w = maxLado; }
+            else { w = Math.round(w * maxLado / h); h = maxLado; }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          callback(canvas.toDataURL("image/jpeg", 0.82));
+        } catch (e) { callback(ev.target.result); }
+      };
+      img.onerror = () => callback(ev.target.result);
+      img.src = ev.target.result;
+    };
+    reader.onerror = () => { try { mostrarToast("No se pudo leer la imagen.", "error"); } catch(e){} };
+    reader.readAsDataURL(file);
+  } catch (e) { try { mostrarToast("No se pudo procesar la imagen.", "error"); } catch(e2){} }
+}
+
 function antiguedad(fechaIngreso, fechaFin) {
   if (!fechaIngreso) return { años: 0, meses: 0, texto: "—", totalMeses: 0 };
   const s = new Date(fechaIngreso), h = fechaFin ? new Date(fechaFin) : new Date();
@@ -3101,6 +3129,7 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
   const [prestamos, setPrestamos] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [vistaEmp, setVistaEmp] = useState("lista");
+  const [menuPerfil, setMenuPerfil] = useState(false);
   // ─── MI HOGAR ──────────────────────────────────────────────────────────────
   const [hijos, setHijos] = useState([]);
   const [gastos, setGastos] = useState([]);
@@ -3275,13 +3304,8 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
     setEscaneoResultado(null);
     
     try {
-      // Leer la foto y guardarla como documentoFoto
-      const dataURL = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = e => res(e.target.result);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
+      // Leer y comprimir la foto antes de guardar/OCR (evita crashes de memoria en iPad)
+      const dataURL = await new Promise((res) => comprimirImagen(file, 1600, res));
       updEmp("documentoFoto", dataURL);
       
       // Cargar Tesseract si no está
@@ -3945,9 +3969,8 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
   const adjuntarFotoQuickPay = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setQuickPay(q => ({ ...q, foto: reader.result }));
-    reader.readAsDataURL(file);
+    comprimirImagen(file, 1400, d => setQuickPay(q => ({ ...q, foto: d })));
+    e.target.value = "";
   };
 
   // Helpers para días libres del modal rápido
@@ -4017,10 +4040,9 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
 
   const adjuntarImagen = (e) => {
     Array.from(e.target.files).forEach(f => {
-      const r = new FileReader();
-      r.onload = ev => setAdjuntos(a => [...a, { nombre: f.name, data: ev.target.result }]);
-      r.readAsDataURL(f);
+      comprimirImagen(f, 1400, d => setAdjuntos(a => [...a, { nombre: f.name, data: d }]));
     });
+    e.target.value = "";
   };
 
   const enviarCorreo = async () => {
@@ -4889,8 +4911,22 @@ ${empleadasHTML}
                 </div>
               </div>
             </div>
-            <div onClick={onLogout} style={{ width: 44, height: 44, borderRadius: "50%", background: "#E0EDFB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#102650", border: "2px solid rgba(255,255,255,.2)", cursor: "pointer" }}>
-              {nombreUsuario.charAt(0).toUpperCase()}
+            <div style={{ position: "relative" }}>
+              <div onClick={() => setMenuPerfil(v => !v)} style={{ width: 44, height: 44, borderRadius: "50%", background: "#E0EDFB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#102650", border: "2px solid rgba(255,255,255,.2)", cursor: "pointer" }}>
+                {nombreUsuario.charAt(0).toUpperCase()}
+              </div>
+              {menuPerfil && (
+                <>
+                  <div onClick={() => setMenuPerfil(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+                  <div style={{ position: "absolute", right: 0, top: 54, background: "#fff", borderRadius: 14, boxShadow: "0 12px 40px rgba(16,38,80,.22)", border: "1px solid #DCE7F2", padding: 8, minWidth: 210, zIndex: 50 }}>
+                    <div style={{ padding: "10px 12px", borderBottom: "1px solid #EEF3F9", marginBottom: 6 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#102650" }}>{nombreUsuario}</div>
+                      <div style={{ fontSize: 11, color: "#6B7B92", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{(user && user.email) || ""}</div>
+                    </div>
+                    <button onClick={() => { setMenuPerfil(false); onLogout(); }} style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: "none", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#B5451B", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>↪ Cerrar sesión</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <div style={{ display: "flex", overflowX: "auto", gap: 0 }}>
@@ -5406,7 +5442,7 @@ ${empleadasHTML}
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 {formEmp.foto ? <img src={formEmp.foto} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: 64, height: 64, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>👤</div>}
                 <div>
-                  <input type="file" accept="image/*" style={{ display: "none" }} id="fotoEmp" onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => updEmp("foto", ev.target.result); r.readAsDataURL(f); }} />
+                  <input type="file" accept="image/*" style={{ display: "none" }} id="fotoEmp" onChange={e => { const f = e.target.files[0]; if (!f) return; comprimirImagen(f, 800, d => updEmp("foto", d)); e.target.value = ""; }} />
                   <Btn small variant="outline" onClick={() => document.getElementById("fotoEmp").click()}>📷 Subir foto</Btn>
                 </div>
               </div>
@@ -5541,10 +5577,7 @@ ${empleadasHTML}
               <input type="file" accept="image/*" style={{ display: "none" }} id="docFotoEmp" onChange={e => {
                 const f = e.target.files[0];
                 if (!f) return;
-                if (f.size > 5 * 1024 * 1024) { mostrarToast("La imagen es muy grande. Máximo 5MB.", "error"); return; }
-                const r = new FileReader();
-                r.onload = ev => updEmp("documentoFoto", ev.target.result);
-                r.readAsDataURL(f);
+                comprimirImagen(f, 1400, d => updEmp("documentoFoto", d));
                 e.target.value = "";
               }} />
               <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} id="docScanEmp" onChange={e => {
