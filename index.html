@@ -3722,7 +3722,7 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
 
   <p class="clausula"><span class="clausula-num">PRIMERO:</span> El/La Empleador(a) y el/la Trabajador(a) declaran que entre ellos existió una relación laboral que inició el <strong>${new Date((registro.fechaIngresoAnterior || emp.fechaIngreso) + "T00:00:00").toLocaleDateString("es-PA")}</strong>${esTerminacion ? ` y finaliza el <strong>${fechaTxt}</strong>` : ` y para efectos de antigüedad termina en esta fecha (<strong>${fechaTxt}</strong>)`}.</p>
 
-  <p class="clausula"><span class="clausula-num">SEGUNDO:</span> En este acto, el/la Empleador(a) hace entrega al/a la Trabajador(a) de la suma de <strong>${fmt(registro.totalLiquidacion)}</strong> (${registro.totalLiquidacion.toFixed(2)} balboas), que corresponde a la totalidad de prestaciones laborales acumuladas hasta esta fecha, según el desglose detallado anteriormente.</p>
+  <p class="clausula"><span class="clausula-num">SEGUNDO:</span> En este acto, el/la Empleador(a) hace entrega al/a la Trabajador(a) de la suma de <strong>${fmt(registro.totalLiquidacion)}</strong>, que corresponde a la totalidad de prestaciones laborales acumuladas hasta esta fecha, según el desglose detallado anteriormente.</p>
 
   <p class="clausula"><span class="clausula-num">TERCERO — FINIQUITO Y PAZ Y SALVO:</span> El/La Trabajador(a) declara haber recibido a su entera satisfacción la suma indicada y manifiesta expresamente que <strong>NADA QUEDA DEBIENDO EL/LA EMPLEADOR(A)</strong> por concepto de salarios, vacaciones, décimo tercer mes, prima de antigüedad, indemnización, preaviso, ni por ningún otro concepto laboral derivado del período comprendido entre las fechas indicadas en la cláusula PRIMERA.</p>
 
@@ -7109,7 +7109,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
   </p>
 
   <p class="parrafo">
-    <span class="parte">DE UNA PARTE:</span> <span class="dato">${esc(nombreUsuario)}</span>, en su condición de <span class="parte">EMPLEADOR(A)</span>, quien en lo sucesivo será denominado simplemente como "EL EMPLEADOR".
+    <span class="parte">DE UNA PARTE:</span> <span class="dato">${esc(nombreUsuario)}</span>, en su condición de <span class="parte">EMPLEADOR(A)</span>, quien en lo sucesivo será denominado(a) simplemente como "EL/LA EMPLEADOR(A)".
   </p>
 
   <p class="parrafo">
@@ -7521,21 +7521,23 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                 html += "</div>";
                 // Solo mencionar a quien firma (quien se queda)
                 const tipo2 = formCarta.acompañanteTipo;
+                const dosFirmantes = (tipo2 !== "padre1" && tipo2 !== "padre2" && !!formCarta.padre2Nombre);
+                html += "<p>"+(dosFirmantes ? "Nosotros, " : "Yo, ");
                 if (tipo2 === "padre2") {
                   // Viaja con Mamá → solo firma Papá
-                  html += "<p><span class="+dq+"dato"+dq+">"+esc(formCarta.padre1Nombre.toUpperCase())+"</span>";
+                  html += "<span class="+dq+"dato"+dq+">"+esc(formCarta.padre1Nombre.toUpperCase())+"</span>";
                   if (formCarta.padre1Cedula) html += ", cédula "+esc(formCarta.padre1Cedula);
                 } else if (tipo2 === "padre1") {
                   // Viaja con Papá → solo firma Mamá
-                  html += "<p><span class="+dq+"dato"+dq+">"+esc(formCarta.padre2Nombre.toUpperCase())+"</span>";
+                  html += "<span class="+dq+"dato"+dq+">"+esc(formCarta.padre2Nombre.toUpperCase())+"</span>";
                   if (formCarta.padre2Cedula) html += ", cédula "+esc(formCarta.padre2Cedula);
                 } else {
                   // Viaja solo u con otro → firman ambos
-                  html += "<p><span class="+dq+"dato"+dq+">"+esc(formCarta.padre1Nombre.toUpperCase())+"</span>";
+                  html += "<span class="+dq+"dato"+dq+">"+esc(formCarta.padre1Nombre.toUpperCase())+"</span>";
                   if (formCarta.padre1Cedula) html += ", cédula "+esc(formCarta.padre1Cedula);
                   if (formCarta.padre2Nombre) { html += ", y <span class="+dq+"dato"+dq+">"+esc(formCarta.padre2Nombre.toUpperCase())+"</span>"; if (formCarta.padre2Cedula) html += ", cédula "+esc(formCarta.padre2Cedula); }
                 }
-                html += ", autorizamos al menor <span class="+dq+"dato"+dq+">"+esc(h.nombre||"[Menor]")+"</span>";
+                html += ", "+(dosFirmantes ? "autorizamos" : "autorizo")+" al menor <span class="+dq+"dato"+dq+">"+esc(h.nombre||"[Menor]")+"</span>";
                 if (h.pasaporte) html += " (pasaporte "+esc(h.pasaporte)+")";
                 html += " a viajar";
                 if (formCarta.acompañante) html += " con <span class="+dq+"dato"+dq+">"+esc(formCarta.acompañante.toUpperCase())+"</span>"+(formCarta.acompañanteRelacion?" ("+esc(formCarta.acompañanteRelacion)+")":"");
@@ -7544,7 +7546,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                 if (formCarta.vuelo || formCarta.aerolinea || formCarta.fechaIda) { html += "<p class="+dq+"slabel"+dq+">Detalles del viaje</p><p>"; if (formCarta.aerolinea) html += "Aerolínea: <strong>"+esc(formCarta.aerolinea)+"</strong>"; if (formCarta.vuelo) html += (formCarta.aerolinea?" · ":"")+"Vuelo: <strong>"+esc(formCarta.vuelo)+"</strong>"; if (formCarta.fechaIda) html += "<br>Salida: <strong>"+fmtFecha(formCarta.fechaIda)+"</strong>"; if (formCarta.fechaRegreso) html += " · Regreso: <strong>"+fmtFecha(formCarta.fechaRegreso)+"</strong>"; html += "</p>"; }
                 if (formCarta.notas) html += "<p class="+dq+"slabel"+dq+">Observaciones</p><p>"+esc(formCarta.notas)+"</p>";
                 const hoy3 = new Date(); const meses3 = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-                html += "<p style="+dq+"margin-top:24px"+dq+">Esta autorización es otorgada en la ciudad de Panamá a los <strong>"+hoy3.getDate()+" días de "+meses3[hoy3.getMonth()]+" de "+hoy3.getFullYear()+"</strong>.</p>";
+                html += "<p style="+dq+"margin-top:24px"+dq+">Esta autorización es otorgada en la ciudad de Panamá a los <strong>"+hoy3.getDate()+(hoy3.getDate()===1?" día":" días")+" del mes de "+meses3[hoy3.getMonth()]+" de "+hoy3.getFullYear()+"</strong>.</p>";
                 html += "<div style="+dq+"margin-top:48px"+dq+">";
                 const tipo = formCarta.acompañanteTipo;
                 const p1l = padres.padre1.genero==="F"?"Madre":"Padre";
@@ -7556,6 +7558,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                 html += "<div class="+dq+"footer"+dq+"><div>Decreto Ley No. 30 de 2008</div></div>";
                 html += "</div></body></html>";
                 win.document.write(html); win.document.close();
+                setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 600);
               };
               return <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
@@ -7635,13 +7638,14 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                     </div>
                     <div style={{ fontSize: 14, color: "#111", lineHeight: 1.8 }}>
                       <p>
+                        {(formCarta.acompañanteTipo !== "padre1" && formCarta.acompañanteTipo !== "padre2" && formCarta.padre2Nombre) ? "Nosotros, " : "Yo, "}
                         {formCarta.acompañanteTipo === "padre2"
                           ? <><strong>{formCarta.padre1Nombre.toUpperCase()}</strong>{formCarta.padre1Cedula?", cédula "+formCarta.padre1Cedula:""}</>
                           : formCarta.acompañanteTipo === "padre1"
                           ? <><strong>{formCarta.padre2Nombre.toUpperCase()}</strong>{formCarta.padre2Cedula?", cédula "+formCarta.padre2Cedula:""}</>
                           : <><strong>{formCarta.padre1Nombre.toUpperCase()}</strong>{formCarta.padre1Cedula?", cédula "+formCarta.padre1Cedula:""}{formCarta.padre2Nombre?", y "+formCarta.padre2Nombre.toUpperCase()+(formCarta.padre2Cedula?", cédula "+formCarta.padre2Cedula:""):""}</>
-                        }{" "}autorizamos a <strong>{hijo?hijo.nombre:""}</strong> a viajar{formCarta.acompañante?" con "+formCarta.acompañante:" sin acompañante"} a <strong>{formCarta.destino}</strong>.</p>
-                      {formCarta.fechaIda && <p style={{ marginTop: 12 }}>{formCarta.aerolinea&&<><strong>{formCarta.aerolinea}</strong> · </>}{formCarta.vuelo&&<>Vuelo <strong>{formCarta.vuelo}</strong> · </>}Salida <strong>{formCarta.fechaIda}</strong>{formCarta.fechaRegreso&&<> · Regreso <strong>{formCarta.fechaRegreso}</strong></>}</p>}
+                        }{", "}{(formCarta.acompañanteTipo !== "padre1" && formCarta.acompañanteTipo !== "padre2" && formCarta.padre2Nombre) ? "autorizamos" : "autorizo"} al menor <strong>{hijo?hijo.nombre:""}</strong> a viajar{formCarta.acompañante?" con "+formCarta.acompañante:" sin acompañante adulto"} a <strong>{formCarta.destino}</strong>.</p>
+                      {formCarta.fechaIda && <p style={{ marginTop: 12 }}>{formCarta.aerolinea&&<><strong>{formCarta.aerolinea}</strong> · </>}{formCarta.vuelo&&<>Vuelo <strong>{formCarta.vuelo}</strong> · </>}Salida <strong>{fmtFecha(formCarta.fechaIda)}</strong>{formCarta.fechaRegreso&&<> · Regreso <strong>{fmtFecha(formCarta.fechaRegreso)}</strong></>}</p>}
                     </div>
                     <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #E8F0EA", display: "flex", gap: 20, flexWrap: "wrap" }}>
                       {formCarta.acompañanteTipo !== "padre1" && <div style={{ minWidth: 160 }}><div style={{ borderTop: "1.5px solid #111", paddingTop: 8, marginTop: 48 }}><div style={{ fontWeight: 700, fontSize: 13 }}>{formCarta.padre1Nombre.toUpperCase()}</div>{formCarta.padre1Cedula&&<div style={{ fontSize: 11, color: C.muted }}>Cédula: {formCarta.padre1Cedula}</div>}<div style={{ fontSize: 11, color: C.muted }}>{padres.padre1.genero==="F"?"Madre":"Padre"}</div></div></div>}
