@@ -1,0 +1,60 @@
+<!-- Cuadra · mascota de SinContador (perezoso panameño) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 260" width="240" height="260">
+  <defs>
+    <linearGradient id="fur" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C9A06A"/><stop offset="1" stop-color="#B98C53"/>
+    </linearGradient>
+  </defs>
+
+  <!-- rama -->
+  <rect x="20" y="30" width="200" height="16" rx="8" fill="#7A5C3A"/>
+  <rect x="40" y="26" width="60" height="8" rx="4" fill="#8D6B45"/>
+
+  <!-- brazo derecho colgando de la rama -->
+  <path d="M150 44 q34 18 24 60" fill="none" stroke="url(#fur)" stroke-width="22" stroke-linecap="round"/>
+  <!-- garras mano derecha -->
+  <g stroke="#102650" stroke-width="6" stroke-linecap="round" fill="none">
+    <path d="M150 40 q-6 -12 -2 -20"/><path d="M158 40 q-1 -13 5 -20"/><path d="M166 42 q4 -12 12 -17"/>
+  </g>
+
+  <!-- cuerpo -->
+  <ellipse cx="120" cy="172" rx="62" ry="66" fill="url(#fur)"/>
+  <!-- barriga crema -->
+  <ellipse cx="120" cy="178" rx="42" ry="48" fill="#F0E2C8"/>
+
+  <!-- brazo izquierdo saludando -->
+  <path d="M70 150 q-30 -16 -34 -46" fill="none" stroke="url(#fur)" stroke-width="22" stroke-linecap="round"/>
+  <g stroke="#102650" stroke-width="6" stroke-linecap="round" fill="none">
+    <path d="M30 108 q-10 -6 -16 -2"/><path d="M33 100 q-11 -4 -17 1"/><path d="M37 93 q-10 -2 -15 4"/>
+  </g>
+
+  <!-- cabeza -->
+  <circle cx="120" cy="110" r="68" fill="url(#fur)"/>
+  <!-- cara crema -->
+  <ellipse cx="120" cy="118" rx="52" ry="50" fill="#F4E8D2"/>
+
+  <!-- parches de los ojos (navy, marca registrada del perezoso) -->
+  <path d="M96 92 q-22 6 -20 34 q2 16 18 14 q16 -3 16 -22 q0 -24 -14 -26 z" fill="#102650"/>
+  <path d="M144 92 q22 6 20 34 q-2 16 -18 14 q-16 -3 -16 -22 q0 -24 14 -26 z" fill="#102650"/>
+
+  <!-- ojos -->
+  <circle cx="98" cy="118" r="13" fill="#fff"/><circle cx="142" cy="118" r="13" fill="#fff"/>
+  <circle cx="100" cy="120" r="6.5" fill="#102650"/><circle cx="140" cy="120" r="6.5" fill="#102650"/>
+  <circle cx="102.5" cy="117.5" r="2.2" fill="#fff"/><circle cx="142.5" cy="117.5" r="2.2" fill="#fff"/>
+
+  <!-- cachetes coral (el nuevo acento) -->
+  <circle cx="86" cy="140" r="11" fill="#FB7185" opacity=".55"/>
+  <circle cx="154" cy="140" r="11" fill="#FB7185" opacity=".55"/>
+
+  <!-- nariz + sonrisa -->
+  <path d="M112 134 q8 8 16 0 q-8 9 -16 0 z" fill="#102650"/>
+  <path d="M120 142 q0 10 -10 12 M120 142 q0 10 10 12" fill="none" stroke="#102650" stroke-width="4.5" stroke-linecap="round"/>
+
+  <!-- tarjetita "cuadrada" con check que sostiene -->
+  <g transform="rotate(-8 150 196)">
+    <rect x="126" y="176" width="60" height="42" rx="9" fill="#fff" stroke="#DCE7F2" stroke-width="2"/>
+    <rect x="126" y="176" width="60" height="13" rx="9" fill="#102650"/>
+    <rect x="126" y="183" width="60" height="6" fill="#102650"/>
+    <path d="M138 202 l8 8 16 -17" fill="none" stroke="#FB7185" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

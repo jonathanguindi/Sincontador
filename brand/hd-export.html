@@ -1,0 +1,36 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@800;900&display=swap" rel="stylesheet">
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Inter',sans-serif;background:transparent}
+  .item{display:inline-block;padding:20px}
+  .wm{font-weight:900;letter-spacing:.04em;white-space:nowrap;vertical-align:middle}
+  .hbox{display:flex;align-items:center;gap:34px}
+  .vbox{display:flex;flex-direction:column;align-items:center;gap:24px}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="iso-color" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#102650"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></symbol>
+  <symbol id="iso-knock" viewBox="0 0 100 100"><rect x="20" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></symbol>
+  <linearGradient id="fur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9A06A"/><stop offset="1" stop-color="#B98C53"/></linearGradient>
+  <symbol id="cuadra" viewBox="0 0 240 260">
+    <rect x="20" y="30" width="200" height="16" rx="8" fill="#7A5C3A"/><rect x="40" y="26" width="60" height="8" rx="4" fill="#8D6B45"/>
+    <path d="M150 44 q34 18 24 60" fill="none" stroke="url(#fur)" stroke-width="22" stroke-linecap="round"/>
+    <g stroke="#102650" stroke-width="6" stroke-linecap="round" fill="none"><path d="M150 40 q-6 -12 -2 -20"/><path d="M158 40 q-1 -13 5 -20"/><path d="M166 42 q4 -12 12 -17"/></g>
+    <ellipse cx="120" cy="172" rx="62" ry="66" fill="url(#fur)"/><ellipse cx="120" cy="178" rx="42" ry="48" fill="#F0E2C8"/>
+    <path d="M70 150 q-30 -16 -34 -46" fill="none" stroke="url(#fur)" stroke-width="22" stroke-linecap="round"/>
+    <g stroke="#102650" stroke-width="6" stroke-linecap="round" fill="none"><path d="M30 108 q-10 -6 -16 -2"/><path d="M33 100 q-11 -4 -17 1"/><path d="M37 93 q-10 -2 -15 4"/></g>
+    <circle cx="120" cy="110" r="68" fill="url(#fur)"/><ellipse cx="120" cy="118" rx="52" ry="50" fill="#F4E8D2"/>
+    <path d="M96 92 q-22 6 -20 34 q2 16 18 14 q16 -3 16 -22 q0 -24 -14 -26 z" fill="#102650"/><path d="M144 92 q22 6 20 34 q-2 16 -18 14 q-16 -3 -16 -22 q0 -24 14 -26 z" fill="#102650"/>
+    <circle cx="98" cy="118" r="13" fill="#fff"/><circle cx="142" cy="118" r="13" fill="#fff"/><circle cx="100" cy="120" r="6.5" fill="#102650"/><circle cx="140" cy="120" r="6.5" fill="#102650"/><circle cx="102.5" cy="117.5" r="2.2" fill="#fff"/><circle cx="142.5" cy="117.5" r="2.2" fill="#fff"/>
+    <circle cx="86" cy="140" r="11" fill="#FB7185" opacity=".55"/><circle cx="154" cy="140" r="11" fill="#FB7185" opacity=".55"/>
+    <path d="M112 134 q8 8 16 0 q-8 9 -16 0 z" fill="#102650"/><path d="M120 142 q0 10 -10 12 M120 142 q0 10 10 12" fill="none" stroke="#102650" stroke-width="4.5" stroke-linecap="round"/>
+    <g transform="rotate(-8 150 196)"><rect x="126" y="176" width="60" height="42" rx="9" fill="#fff" stroke="#DCE7F2" stroke-width="2"/><rect x="126" y="176" width="60" height="13" rx="9" fill="#102650"/><rect x="126" y="183" width="60" height="6" fill="#102650"/><path d="M138 202 l8 8 16 -17" fill="none" stroke="#FB7185" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g>
+  </symbol>
+</defs></svg>
+
+<div class="item" id="hd-iso-color"><svg width="1024" height="1024"><use href="#iso-color"/></svg></div>
+<div class="item" id="hd-iso-blanco"><svg width="1024" height="1024"><use href="#iso-knock"/></svg></div>
+<div class="item" id="hd-app-icon"><svg width="1024" height="1024"><use href="#iso-color"/></svg></div>
+<div class="item" id="hd-mascota"><svg width="900" height="975" viewBox="0 0 240 260"><use href="#cuadra"/></svg></div>
+<div class="item" id="hd-h-color"><div class="hbox"><svg width="200" height="200"><use href="#iso-color"/></svg><span class="wm" style="font-size:118px"><span style="color:#102650">SIN</span> <span style="color:#1E40AF">CONTADOR</span></span></div></div>
+<div class="item" id="hd-h-blanco"><div class="hbox"><svg width="200" height="200"><use href="#iso-knock"/></svg><span class="wm" style="font-size:118px"><span style="color:#fff">SIN</span> <span style="color:#9ACDFC">CONTADOR</span></span></div></div>
+<div class="item" id="hd-v-color"><div class="vbox"><svg width="300" height="300"><use href="#iso-color"/></svg><span class="wm" style="font-size:104px"><span style="color:#102650">SIN</span> <span style="color:#1E40AF">CONTADOR</span></span><span style="font-size:42px;color:#4A5C75;font-weight:600">La cuenta que sí cuadra</span></div></div>
+</body></html>

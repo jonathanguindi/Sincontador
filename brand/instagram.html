@@ -2,7 +2,7 @@
 <html lang="es"><head><meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  :root{--navy:#102650;--azul:#1E40AF;--celeste:#9ACDFC;--celesteL:#E0EDFB;--bg:#EFF6FE;--muted:#4A5C75}
+  :root{--navy:#102650;--azul:#1E40AF;--celeste:#9ACDFC;--celesteL:#E0EDFB;--bg:#EFF6FE;--muted:#4A5C75;--coral:#FB7185}
   *{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{font-family:'Inter',sans-serif}
   .post{width:1080px;height:1080px;overflow:hidden;position:relative;display:flex;flex-direction:column;padding:96px}
@@ -20,26 +20,52 @@
   .spacer{flex:1}
   h1{font-weight:900;letter-spacing:-.025em;line-height:1.02}
   .handle{font-size:26px;font-weight:700;letter-spacing:.02em;opacity:.85}
-  .feat{display:flex;align-items:center;gap:22px;font-size:38px;font-weight:700;padding:16px 0}
+  .feat{display:flex;align-items:center;gap:22px;font-size:36px;font-weight:700;padding:13px 0}
   .feat .ic{font-size:46px;width:64px;text-align:center}
   .painbox{background:#fff;border:1px solid #DCE7F2;border-radius:28px;padding:30px 34px;font-size:34px;font-weight:600;
     color:var(--navy);display:flex;align-items:center;gap:22px;box-shadow:0 18px 50px rgba(16,38,80,.08);margin-bottom:22px}
   .painbox .ic{font-size:44px}
+  .cuadra{position:absolute;pointer-events:none}
+  .coral-line{height:14px;border-radius:8px;background:var(--coral);width:280px;margin-top:18px}
+  .coral-btn{background:var(--coral);color:#fff;font-weight:800;border-radius:22px;padding:24px 46px;font-size:40px;display:inline-block;box-shadow:0 18px 44px rgba(251,113,133,.45)}
+  .coral-tag{display:inline-block;background:var(--coral);color:#fff;font-weight:900;font-size:26px;letter-spacing:.04em;padding:8px 22px;border-radius:30px;transform:rotate(-4deg)}
 </style></head>
 <body>
+
+<!-- mascota reutilizable: Cuadra 🦥 -->
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="fur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9A06A"/><stop offset="1" stop-color="#B98C53"/></linearGradient>
+  <symbol id="cuadra" viewBox="0 0 240 260">
+    <rect x="20" y="30" width="200" height="16" rx="8" fill="#7A5C3A"/><rect x="40" y="26" width="60" height="8" rx="4" fill="#8D6B45"/>
+    <path d="M150 44 q34 18 24 60" fill="none" stroke="url(#fur)" stroke-width="22" stroke-linecap="round"/>
+    <g stroke="#102650" stroke-width="6" stroke-linecap="round" fill="none"><path d="M150 40 q-6 -12 -2 -20"/><path d="M158 40 q-1 -13 5 -20"/><path d="M166 42 q4 -12 12 -17"/></g>
+    <ellipse cx="120" cy="172" rx="62" ry="66" fill="url(#fur)"/><ellipse cx="120" cy="178" rx="42" ry="48" fill="#F0E2C8"/>
+    <path d="M70 150 q-30 -16 -34 -46" fill="none" stroke="url(#fur)" stroke-width="22" stroke-linecap="round"/>
+    <g stroke="#102650" stroke-width="6" stroke-linecap="round" fill="none"><path d="M30 108 q-10 -6 -16 -2"/><path d="M33 100 q-11 -4 -17 1"/><path d="M37 93 q-10 -2 -15 4"/></g>
+    <circle cx="120" cy="110" r="68" fill="url(#fur)"/><ellipse cx="120" cy="118" rx="52" ry="50" fill="#F4E8D2"/>
+    <path d="M96 92 q-22 6 -20 34 q2 16 18 14 q16 -3 16 -22 q0 -24 -14 -26 z" fill="#102650"/><path d="M144 92 q22 6 20 34 q-2 16 -18 14 q-16 -3 -16 -22 q0 -24 14 -26 z" fill="#102650"/>
+    <circle cx="98" cy="118" r="13" fill="#fff"/><circle cx="142" cy="118" r="13" fill="#fff"/><circle cx="100" cy="120" r="6.5" fill="#102650"/><circle cx="140" cy="120" r="6.5" fill="#102650"/><circle cx="102.5" cy="117.5" r="2.2" fill="#fff"/><circle cx="142.5" cy="117.5" r="2.2" fill="#fff"/>
+    <circle cx="86" cy="140" r="11" fill="#FB7185" opacity=".55"/><circle cx="154" cy="140" r="11" fill="#FB7185" opacity=".55"/>
+    <path d="M112 134 q8 8 16 0 q-8 9 -16 0 z" fill="#102650"/><path d="M120 142 q0 10 -10 12 M120 142 q0 10 10 12" fill="none" stroke="#102650" stroke-width="4.5" stroke-linecap="round"/>
+    <g transform="rotate(-8 150 196)"><rect x="126" y="176" width="60" height="42" rx="9" fill="#fff" stroke="#DCE7F2" stroke-width="2"/><rect x="126" y="176" width="60" height="13" rx="9" fill="#102650"/><rect x="126" y="183" width="60" height="6" fill="#102650"/><path d="M138 202 l8 8 16 -17" fill="none" stroke="#FB7185" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g>
+  </symbol>
+</defs></svg>
+
 
 <!-- ===== POST 1 · LANZAMIENTO ===== -->
 <div class="post navy" id="p1">
   <div class="logo">
-    <svg width="64" height="64" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#fff"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#1E40AF" transform="rotate(-15 51 50)"/></svg>
+    <svg width="64" height="64" viewBox="0 0 100 100"><rect x="20" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></svg>
     <div class="word"><span style="color:#fff">SIN</span> <span style="color:var(--celeste)">CONTADOR</span></div>
   </div>
   <div class="spacer"></div>
-  <div class="badge b-navy">🇵🇦 HECHO PARA PANAMÁ</div>
+  <div class="badge b-navy">🇵🇦 PARA HOGARES DE PANAMÁ</div>
   <h1 style="font-size:104px;margin-top:30px">La cuenta<br>que <span style="color:var(--celeste)">sí cuadra</span>.</h1>
-  <p style="font-size:40px;color:rgba(255,255,255,.85);margin-top:24px;font-weight:500;line-height:1.4">Le pagas a tu empleada doméstica<br>legal y fácil — sin contratar contador.</p>
+  <div class="coral-line"></div>
+  <p style="font-size:40px;color:rgba(255,255,255,.85);margin-top:22px;font-weight:500;line-height:1.4">Le pagas a tu empleada doméstica<br>legal y fácil — sin contratar contador.</p>
   <div class="spacer"></div>
   <div class="handle">@sincontador · sincontador.app</div>
+  <svg class="cuadra" style="width:250px;right:24px;bottom:120px"><use href="#cuadra"/></svg>
 </div>
 
 <!-- ===== POST 2 · EL PROBLEMA ===== -->
@@ -67,7 +93,7 @@
     <div class="feat"><span class="ic">📲</span><span>Envío directo por WhatsApp</span></div>
   </div>
   <div class="spacer"></div>
-  <p style="font-size:34px;color:var(--celeste);font-weight:700;letter-spacing:.02em">⚖️ Todo según la ley panameña · Decreto 13 · CSS Ley 462</p>
+  <p style="font-size:26px;color:var(--celeste);font-weight:700;letter-spacing:.01em;white-space:nowrap">⚖️ Todo según la ley panameña · Decreto 13 · CSS Ley 462</p>
 </div>
 
 <!-- ===== POST 4 · PRECIO ===== -->
@@ -75,19 +101,22 @@
   <div class="badge b-navy">☕ MENOS QUE UN CAFÉ AL MES</div>
   <div class="spacer"></div>
   <p style="font-size:46px;font-weight:600;color:rgba(255,255,255,.85)">Empieza con</p>
-  <h1 style="font-size:150px;line-height:.95;margin-top:6px">30 días<br><span style="color:var(--celeste)">gratis</span></h1>
-  <p style="font-size:44px;font-weight:600;margin-top:30px;line-height:1.4">Luego solo <b>$3.99/mes</b> o <b>$39.99 al año</b>.<br><span style="color:var(--celeste)">Sin tarjeta de crédito para probar.</span></p>
+  <h1 style="font-size:132px;line-height:.95;margin-top:6px">30 días<br><span style="color:var(--coral)">gratis</span></h1>
+  <p style="font-size:44px;font-weight:600;margin-top:30px;line-height:1.4">Luego solo <b style="color:var(--celeste)">$3.99/mes</b> o <b style="color:var(--celeste)">$39.99 al año</b>.<br><span style="opacity:.85">Sin tarjeta de crédito para probar.</span></p>
   <div class="spacer"></div>
-  <div class="logo"><svg width="44" height="44" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#fff"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#1E40AF" transform="rotate(-15 51 50)"/></svg><div class="word" style="font-size:30px"><span style="color:#fff">SIN</span> <span style="color:var(--celeste)">CONTADOR</span></div></div>
+  <svg class="cuadra" style="width:220px;right:28px;bottom:26px"><use href="#cuadra"/></svg>
+  <div class="logo"><svg width="44" height="44" viewBox="0 0 100 100"><rect x="20" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></svg><div class="word" style="font-size:30px"><span style="color:#fff">SIN</span> <span style="color:var(--celeste)">CONTADOR</span></div></div>
 </div>
 
 <!-- ===== POST 5 · CTA ===== -->
 <div class="post navy" id="p5" style="align-items:center;text-align:center;justify-content:center">
-  <svg width="120" height="120" viewBox="0 0 100 100" style="filter:drop-shadow(0 16px 36px rgba(0,0,0,.4))"><rect width="100" height="100" rx="22" fill="#fff"/><rect x="20" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#102650"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#1E40AF" transform="rotate(-15 51 50)"/></svg>
+  <svg width="120" height="120" viewBox="0 0 100 100" style="filter:drop-shadow(0 16px 36px rgba(0,0,0,.4))"><rect x="20" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="36" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="52" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="68" y="20" width="10" height="60" rx="5" fill="#fff"/><rect x="12" y="44.5" width="78" height="11" rx="5.5" fill="#9ACDFC" transform="rotate(-15 51 50)"/></svg>
   <h1 style="font-size:110px;margin-top:44px">Empieza<br>hoy.</h1>
   <p style="font-size:44px;color:rgba(255,255,255,.85);margin-top:28px;font-weight:500">Tu primera quincena ordenada<br>te toma menos de 5 minutos.</p>
-  <div style="margin-top:50px;background:#fff;color:var(--navy);font-size:40px;font-weight:800;padding:26px 56px;border-radius:20px">sincontador.app →</div>
-  <p class="handle" style="margin-top:40px;color:var(--celeste)">@sincontador</p>
+  <div class="coral-btn" style="margin-top:50px">sincontador.app →</div>
+  <p style="margin-top:34px;font-size:32px;font-weight:800;color:var(--celeste)">👉 Link en la bio para empezar</p>
+  <p class="handle" style="margin-top:12px;opacity:.65;font-size:24px">@sincontador</p>
+  <svg class="cuadra" style="width:215px;left:24px;bottom:24px"><use href="#cuadra"/></svg>
 </div>
 
 </body></html>

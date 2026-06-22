@@ -1694,6 +1694,34 @@ const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&
 const pct = (b, p) => (b * p) / 100;
 const hoy = () => new Date().toISOString().split("T")[0];
 
+// Comprime/redimensiona una imagen antes de guardarla. Evita crashes de memoria
+// en iPad/iPhone al tomar fotos a resolución completa (12MP) y excederse de cuota.
+function comprimirImagen(file, maxLado, callback) {
+  try {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+          if (w > maxLado || h > maxLado) {
+            if (w >= h) { h = Math.round(h * maxLado / w); w = maxLado; }
+            else { w = Math.round(w * maxLado / h); h = maxLado; }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          callback(canvas.toDataURL("image/jpeg", 0.82));
+        } catch (e) { callback(ev.target.result); }
+      };
+      img.onerror = () => callback(ev.target.result);
+      img.src = ev.target.result;
+    };
+    reader.onerror = () => { try { mostrarToast("No se pudo leer la imagen.", "error"); } catch(e){} };
+    reader.readAsDataURL(file);
+  } catch (e) { try { mostrarToast("No se pudo procesar la imagen.", "error"); } catch(e2){} }
+}
+
 function antiguedad(fechaIngreso, fechaFin) {
   if (!fechaIngreso) return { años: 0, meses: 0, texto: "—", totalMeses: 0 };
   const s = new Date(fechaIngreso), h = fechaFin ? new Date(fechaFin) : new Date();
@@ -3041,6 +3069,58 @@ function ChatSofia({ user, suscripcion }) {
   );
 }
 
+// ─── GRÁFICAS (SVG propio, sin librerías) ───────────────────────────────────
+function Donut({ data, size = 168 }) {
+  const total = data.reduce((s, d) => s + d.value, 0) || 1;
+  const r = size / 2 - 16, cx = size / 2, cy = size / 2, circ = 2 * Math.PI * r;
+  let offset = 0;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", justifyContent: "center" }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ flexShrink: 0 }}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="#EEF3F9" strokeWidth={22} />
+        {data.map((d, i) => {
+          const dash = (d.value / total) * circ;
+          const seg = <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={d.color} strokeWidth={22}
+            strokeDasharray={`${dash} ${circ - dash}`} strokeDashoffset={-offset}
+            transform={`rotate(-90 ${cx} ${cy})`} />;
+          offset += dash;
+          return seg;
+        })}
+        <text x={cx} y={cy - 4} textAnchor="middle" style={{ fontSize: 22, fontWeight: 800, fill: C.dark, fontFamily: "'Inter',sans-serif" }}>{fmt(total)}</text>
+        <text x={cx} y={cy + 16} textAnchor="middle" style={{ fontSize: 10, fill: C.mutedLight, fontFamily: "'Inter',sans-serif", letterSpacing: ".06em" }}>AL MES</text>
+      </svg>
+      <div style={{ display: "flex", flexDirection: "column", gap: 9, minWidth: 180, flex: 1 }}>
+        {data.map((d, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 13 }}>
+            <span style={{ width: 12, height: 12, borderRadius: 4, background: d.color, flexShrink: 0 }} />
+            <span style={{ fontWeight: 600, color: C.dark }}>{d.label}</span>
+            <span style={{ color: C.mutedLight, marginLeft: "auto", fontWeight: 600 }}>{fmt(d.value)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Barras({ data }) {
+  const max = Math.max(...data.map(d => d.value), 1);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {data.map((d, i) => (
+        <div key={i}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+            <span style={{ fontWeight: 600, color: C.dark }}>{d.label}</span>
+            <span style={{ fontWeight: 700, color: C.dark }}>{d.sub || fmt(d.value)}</span>
+          </div>
+          <div style={{ height: 13, background: "#EEF3F9", borderRadius: 8, overflow: "hidden" }}>
+            <div style={{ width: `${Math.min(100, (d.value / max) * 100)}%`, height: "100%", background: d.color || "#1E40AF", borderRadius: 8 }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
   const [ready, setReady] = useState(false);
   const uid0 = user?.id || ""; const [tab, setTab] = useState(() => { try { return localStorage.getItem("sc_tab_" + uid0) || "dashboard"; } catch(e) { return "dashboard"; } });
@@ -3049,6 +3129,7 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
   const [prestamos, setPrestamos] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [vistaEmp, setVistaEmp] = useState("lista");
+  const [menuPerfil, setMenuPerfil] = useState(false);
   // ─── MI HOGAR ──────────────────────────────────────────────────────────────
   const [hijos, setHijos] = useState([]);
   const [gastos, setGastos] = useState([]);
@@ -3223,13 +3304,8 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
     setEscaneoResultado(null);
     
     try {
-      // Leer la foto y guardarla como documentoFoto
-      const dataURL = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = e => res(e.target.result);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
+      // Leer y comprimir la foto antes de guardar/OCR (evita crashes de memoria en iPad)
+      const dataURL = await new Promise((res) => comprimirImagen(file, 1600, res));
       updEmp("documentoFoto", dataURL);
       
       // Cargar Tesseract si no está
@@ -3893,9 +3969,8 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
   const adjuntarFotoQuickPay = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setQuickPay(q => ({ ...q, foto: reader.result }));
-    reader.readAsDataURL(file);
+    comprimirImagen(file, 1400, d => setQuickPay(q => ({ ...q, foto: d })));
+    e.target.value = "";
   };
 
   // Helpers para días libres del modal rápido
@@ -3965,10 +4040,9 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
 
   const adjuntarImagen = (e) => {
     Array.from(e.target.files).forEach(f => {
-      const r = new FileReader();
-      r.onload = ev => setAdjuntos(a => [...a, { nombre: f.name, data: ev.target.result }]);
-      r.readAsDataURL(f);
+      comprimirImagen(f, 1400, d => setAdjuntos(a => [...a, { nombre: f.name, data: d }]));
     });
+    e.target.value = "";
   };
 
   const enviarCorreo = async () => {
@@ -4816,7 +4890,7 @@ ${empleadasHTML}
       <style>{`         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}         input,select,textarea{transition:border .15s;font-family:'Inter',sans-serif}         input:focus,select:focus,textarea:focus{border-color:#1E40AF!important;outline:none;box-shadow:0 0 0 3px rgba(30,64,175,0.12)}         .tab{font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:14px 0;background:transparent;border:none;border-bottom:2px solid transparent;color:rgba(220,231,242,.7);margin-right:20px;cursor:pointer;transition:all .15s;white-space:nowrap}         .tab.on{border-bottom-color:#fff;color:#fff;font-weight:700}         .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}         .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}         @media(max-width:560px){.g2{grid-template-columns:1fr}.g3{grid-template-columns:1fr 1fr 1fr}}         .emp-row{background:#fff;border:1px solid rgba(220,231,242,.5);border-radius:16px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;transition:all .2s}         .emp-row:active{transform:scale(.98)}         .vac-bar{height:4px;border-radius:2px;background:#DCE7F2;overflow:hidden;margin-top:6px}         .vac-bar-fill{height:100%;border-radius:2px;background:#1E40AF}       `}</style>
 
       {/* HERO HEADER */}
-      <div style={{ background: "#102650", position: "sticky", top: 0, zIndex: 100, overflow: "hidden" }}>
+      <div style={{ background: "#102650", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 780, margin: "0 auto", padding: "0 16px", position: "relative" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", height: 72 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -4837,12 +4911,26 @@ ${empleadasHTML}
                 </div>
               </div>
             </div>
-            <div onClick={onLogout} style={{ width: 44, height: 44, borderRadius: "50%", background: "#E0EDFB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#102650", border: "2px solid rgba(255,255,255,.2)", cursor: "pointer" }}>
-              {nombreUsuario.charAt(0).toUpperCase()}
+            <div style={{ position: "relative" }}>
+              <div onClick={() => setMenuPerfil(v => !v)} style={{ width: 44, height: 44, borderRadius: "50%", background: "#E0EDFB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#102650", border: "2px solid rgba(255,255,255,.2)", cursor: "pointer" }}>
+                {nombreUsuario.charAt(0).toUpperCase()}
+              </div>
+              {menuPerfil && (
+                <>
+                  <div onClick={() => setMenuPerfil(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+                  <div style={{ position: "absolute", right: 0, top: 54, background: "#fff", borderRadius: 14, boxShadow: "0 12px 40px rgba(16,38,80,.22)", border: "1px solid #DCE7F2", padding: 8, minWidth: 210, zIndex: 50 }}>
+                    <div style={{ padding: "10px 12px", borderBottom: "1px solid #EEF3F9", marginBottom: 6 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#102650" }}>{nombreUsuario}</div>
+                      <div style={{ fontSize: 11, color: "#6B7B92", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{(user && user.email) || ""}</div>
+                    </div>
+                    <button onClick={() => { setMenuPerfil(false); onLogout(); }} style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: "none", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#B5451B", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>↪ Cerrar sesión</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <div style={{ display: "flex", overflowX: "auto", gap: 0 }}>
-            {[["dashboard","Inicio"],["empleados","Empleadas"],["hogar","Mi Hogar"],["prestamos","Préstamos"],["historial","Historial"],["leyes","Reglas"]].map(([t, l]) => (
+            {[["dashboard","Inicio"],["resumen","Resumen"],["empleados","Empleadas"],["hogar","Mi Hogar"],["prestamos","Préstamos"],["historial","Historial"],["leyes","Reglas"]].map(([t, l]) => (
               <button key={t} className={`tab${tab === t ? " on" : ""}`}
                 onClick={() => { setTab(t); setVistaEmp("lista"); setVistaHogar("lista"); }}>{l}</button>
             ))}
@@ -4869,6 +4957,92 @@ ${empleadasHTML}
             </div>;
           }
           return null;
+        })()}
+
+        {/* RESUMEN — dashboard con gráficas */}
+        {tab === "resumen" && (() => {
+          const pagos = empleados.map(e => calcularPago(e, leyes, prestamos, []));
+          const costoTotal = pagos.reduce((s, p) => s + p.costoMensualEmpleador, 0);
+          const netoQuincena = pagos.reduce((s, p) => s + p.netoEmpleado, 0);
+          const salarios = pagos.reduce((s, p) => s + p.salarioMensual, 0);
+          const aportes = pagos.reduce((s, p) => s + p.cssPatron + p.segEduPatron, 0);
+          const decimo = pagos.reduce((s, p) => s + p.decimoTercerMensual, 0);
+          const vacac = pagos.reduce((s, p) => s + p.vacacionesMensual, 0);
+          const prestAct = prestamos.filter(p => p.saldo > 0);
+          const saldoPrest = prestAct.reduce((s, p) => s + p.saldo, 0);
+          const gastosMes = (gastos || []).filter(g => g.activo).reduce((s, g) => { const m = parseFloat(g.monto) || 0; return s + (g.frecuencia === "quincenal" ? m * 2 : g.frecuencia === "anual" ? m / 12 : m); }, 0);
+          const ahoraD = new Date();
+          const pagadoMes = (historial || []).filter(h => { const f = new Date(h.fecha); return f.getMonth() === ahoraD.getMonth() && f.getFullYear() === ahoraD.getFullYear(); }).reduce((s, h) => s + (h.netoEmpleado || 0), 0);
+          const Kpi = ({ ic, val, lbl, color }) => (
+            <div style={{ background: "#fff", borderRadius: 16, padding: "16px 14px", border: `1px solid ${C.border}`, boxShadow: "0 4px 14px rgba(16,38,80,.05)" }}>
+              <div style={{ fontSize: 18, marginBottom: 8 }}>{ic}</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: color || C.dark, letterSpacing: "-.02em", lineHeight: 1 }}>{val}</div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em" }}>{lbl}</div>
+            </div>
+          );
+
+          if (empleados.length === 0) {
+            return (
+              <div style={{ textAlign: "center", padding: "70px 24px" }}>
+                <div style={{ fontSize: 56, marginBottom: 12 }}>📊</div>
+                <h3 style={{ fontSize: 20, fontWeight: 800, color: C.dark, marginBottom: 8 }}>Aún no hay nada que resumir</h3>
+                <p style={{ fontSize: 14, color: C.muted, marginBottom: 22, lineHeight: 1.5 }}>Agrega tu primera empleada y aquí verás tus gráficas y números.</p>
+                <Btn variant="accent" onClick={() => setTab("empleados")}>+ Agregar empleada</Btn>
+              </div>
+            );
+          }
+
+          return (
+            <div>
+              <div style={{ padding: "24px 4px 12px" }}>
+                <h2 style={{ fontSize: 28, fontWeight: 800, color: C.dark, letterSpacing: "-.02em", lineHeight: 1.1 }}>Resumen 📊</h2>
+                <p style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>Todo tu hogar en números</p>
+              </div>
+
+              <div className="g3" style={{ marginBottom: 12 }}>
+                <Kpi ic="💰" val={fmt(costoTotal)} lbl="Costo / mes" color="#1E40AF" />
+                <Kpi ic="📅" val={fmt(netoQuincena)} lbl="Neto quincena" />
+                <Kpi ic="👥" val={empleados.length} lbl="Empleadas" />
+              </div>
+              <div className="g3" style={{ marginBottom: 22 }}>
+                <Kpi ic="🏦" val={fmt(saldoPrest)} lbl="Saldo préstamos" color={saldoPrest > 0 ? "#B5451B" : C.dark} />
+                <Kpi ic="🏠" val={fmt(gastosMes)} lbl="Gastos hogar/mes" />
+                <Kpi ic="✅" val={fmt(pagadoMes)} lbl="Pagado este mes" color="#16A34A" />
+              </div>
+
+              <Card style={{ marginBottom: 18 }}>
+                <SectionTitle>¿En qué se va tu costo mensual?</SectionTitle>
+                <Donut data={[
+                  { label: "Salarios", value: salarios, color: "#1E40AF" },
+                  { label: "CSS + Seguro Educativo", value: aportes, color: "#9ACDFC" },
+                  { label: "Décimo (provisión)", value: decimo, color: "#C37D16" },
+                  { label: "Vacaciones (provisión)", value: vacac, color: "#FB7185" },
+                ]} />
+              </Card>
+
+              <Card style={{ marginBottom: 18 }}>
+                <SectionTitle>Costo mensual por empleada</SectionTitle>
+                <Barras data={empleados.map((e, i) => ({ label: e.nombre || `Empleada ${i + 1}`, value: pagos[i].costoMensualEmpleador, color: "#1E40AF" }))} />
+              </Card>
+
+              {prestAct.length > 0 && (
+                <Card style={{ marginBottom: 18 }}>
+                  <SectionTitle>Préstamos · cuánto se ha pagado</SectionTitle>
+                  <Barras data={prestAct.map(p => {
+                    const emp = empleados.find(e => e.id === p.empleadoId);
+                    const monto = parseFloat(p.monto) || 0;
+                    const pagado = Math.max(0, monto - p.saldo);
+                    const pct = monto > 0 ? Math.round((pagado / monto) * 100) : 0;
+                    return { label: (emp ? emp.nombre : "Préstamo") + (p.motivo ? ` · ${p.motivo}` : ""), value: pct, sub: `${pct}% · falta ${fmt(p.saldo)}`, color: "#16A34A" };
+                  })} />
+                </Card>
+              )}
+
+              <div style={{ textAlign: "center", fontSize: 12, color: C.mutedLight, padding: "8px 0 4px" }}>
+                Actualizado al {ahoraD.toLocaleDateString("es-PA")}
+              </div>
+            </div>
+          );
         })()}
 
         {/* DASHBOARD */}
@@ -5268,7 +5442,7 @@ ${empleadasHTML}
               <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 {formEmp.foto ? <img src={formEmp.foto} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover" }} /> : <div style={{ width: 64, height: 64, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>👤</div>}
                 <div>
-                  <input type="file" accept="image/*" style={{ display: "none" }} id="fotoEmp" onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => updEmp("foto", ev.target.result); r.readAsDataURL(f); }} />
+                  <input type="file" accept="image/*" style={{ display: "none" }} id="fotoEmp" onChange={e => { const f = e.target.files[0]; if (!f) return; comprimirImagen(f, 800, d => updEmp("foto", d)); e.target.value = ""; }} />
                   <Btn small variant="outline" onClick={() => document.getElementById("fotoEmp").click()}>📷 Subir foto</Btn>
                 </div>
               </div>
@@ -5403,10 +5577,7 @@ ${empleadasHTML}
               <input type="file" accept="image/*" style={{ display: "none" }} id="docFotoEmp" onChange={e => {
                 const f = e.target.files[0];
                 if (!f) return;
-                if (f.size > 5 * 1024 * 1024) { mostrarToast("La imagen es muy grande. Máximo 5MB.", "error"); return; }
-                const r = new FileReader();
-                r.onload = ev => updEmp("documentoFoto", ev.target.result);
-                r.readAsDataURL(f);
+                comprimirImagen(f, 1400, d => updEmp("documentoFoto", d));
                 e.target.value = "";
               }} />
               <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} id="docScanEmp" onChange={e => {
