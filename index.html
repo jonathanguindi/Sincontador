@@ -3135,9 +3135,9 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
   const [gastos, setGastos] = useState([]);
   const [padres, setPadres] = useState({ padre1:{ nombre:"", cedula:"", pasaporte:"", pasaporteFoto:null, genero:"M" }, padre2:{ nombre:"", cedula:"", pasaporte:"", pasaporteFoto:null, genero:"F" } });
   const [vistaHogar, setVistaHogar] = useState("lista");
-  const [formHijo, setFormHijo] = useState({ id:null, nombre:"", fechaNacimiento:"", colegio:"", notas:"", pasaporte:"", pasaporteVence:"", pasaporteFoto:null, cedula:"", nacionalidad:"" });
+  const [formHijo, setFormHijo] = useState({ id:null, nombre:"", fechaNacimiento:"", genero:"F", colegio:"", notas:"", pasaporte:"", pasaporteVence:"", pasaporteFoto:null, cedula:"", nacionalidad:"" });
   const [formGasto, setFormGasto] = useState({ id:null, nombre:"", monto:"", categoria:"hogar", hijoId:"", frecuencia:"mensual", activo:true });
-  const cartaVacia = { hijoIds:[], acompañanteTipo:"", acompañante:"", acompañanteRelacion:"", acompañantePasaporte:"", padre1Nombre:"", padre1Cedula:"", padre2Nombre:"", padre2Cedula:"", vuelo:"", aerolinea:"", destino:"", fechaIda:"", fechaRegreso:"", firmaBoth:true, notas:"" };
+  const cartaVacia = { hijoIds:[], acompañanteTipo:"", acompañante:"", acompañanteRelacion:"", acompañantePasaporte:"", padre1Nombre:"", padre1Cedula:"", padre2Nombre:"", padre2Cedula:"", vuelo:"", vueloRegreso:"", aerolinea:"", destino:"", fechaIda:"", fechaRegreso:"", firmaBoth:true, notas:"" };
   const [formCarta, setFormCarta] = useState(cartaVacia);
   const [cartaGenerada, setCartaGenerada] = useState(false);
   const [empActivo, setEmpActivo] = useState(null);
@@ -3804,7 +3804,7 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
     if (!formHijo.nombre.trim()) { mostrarToast("Ingresa el nombre del hijo.", "error"); return; }
     if (formHijo.id) setHijos(h => h.map(x => x.id === formHijo.id ? formHijo : x));
     else setHijos(h => [...h, { ...formHijo, id: Date.now() }]);
-    setFormHijo({ id:null, nombre:"", fechaNacimiento:"", colegio:"", notas:"", pasaporte:"", pasaporteVence:"", pasaporteFoto:null, cedula:"", nacionalidad:"" });
+    setFormHijo({ id:null, nombre:"", fechaNacimiento:"", genero:"F", colegio:"", notas:"", pasaporte:"", pasaporteVence:"", pasaporteFoto:null, cedula:"", nacionalidad:"" });
     setVistaHogar("lista");
   };
   const eliminarHijo = (id) => {
@@ -7389,7 +7389,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
               {/* Hijos */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, marginTop: 20 }}>
                 <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700 }}>Hijos</div>
-                <Btn small variant="accent" onClick={() => { setFormHijo({ id:null, nombre:"", fechaNacimiento:"", colegio:"", notas:"", pasaporte:"", pasaporteVence:"", pasaporteFoto:null, cedula:"", nacionalidad:"" }); setVistaHogar("formHijo"); }}>+ Hijo</Btn>
+                <Btn small variant="accent" onClick={() => { setFormHijo({ id:null, nombre:"", fechaNacimiento:"", genero:"F", colegio:"", notas:"", pasaporte:"", pasaporteVence:"", pasaporteFoto:null, cedula:"", nacionalidad:"" }); setVistaHogar("formHijo"); }}>+ Hijo</Btn>
               </div>
               {hijos.length === 0 && <div style={{ textAlign: "center", padding: 20, color: C.muted, fontSize: 13, background: "#fff", borderRadius: 12, border: "1px dashed #E8F0EA", marginBottom: 12 }}>Sin hijos registrados</div>}
               {hijos.map(h => {
@@ -7475,6 +7475,14 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><label style={{ fontSize: 13, fontWeight: 600, color: "#102650" }}>Pasaporte</label><input value={formHijo.pasaporte||""} onChange={e=>setFormHijo(f=>({...f,pasaporte:e.target.value}))} placeholder="PA12345678" style={{ padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/></div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><label style={{ fontSize: 13, fontWeight: 600, color: "#102650" }}>Vence</label><input type="date" value={formHijo.pasaporteVence||""} onChange={e=>setFormHijo(f=>({...f,pasaporteVence:e.target.value}))} style={{ padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/></div>
                 </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><label style={{ fontSize: 13, fontWeight: 600, color: "#102650" }}>Sexo</label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {[["F","Niña"],["M","Niño"]].map(([g,l]) => {
+                      const sel = (formHijo.genero||"F") === g;
+                      return <div key={g} onClick={()=>setFormHijo(f=>({...f,genero:g}))} style={{ flex: 1, textAlign: "center", padding: "10px 12px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 14, background: sel?"#102650":"#F8FAFC", color: sel?"#fff":"#102650", border: sel?"1.5px solid #102650":"1.5px solid #E8F0EA" }}>{l}</div>;
+                    })}
+                  </div>
+                </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><label style={{ fontSize: 13, fontWeight: 600, color: "#102650" }}>Colegio</label><input value={formHijo.colegio} onChange={e=>setFormHijo(f=>({...f,colegio:e.target.value}))} placeholder="Instituto Justo Arosemena" style={{ padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/></div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}><label style={{ fontSize: 13, fontWeight: 600, color: "#102650" }}>Notas</label><textarea value={formHijo.notas} onChange={e=>setFormHijo(f=>({...f,notas:e.target.value}))} placeholder="Alergias, actividades..." style={{ padding: "10px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 13, fontFamily: "'Inter',sans-serif", minHeight: 80, resize: "vertical", outline: "none" }}/></div>
               </div>
@@ -7495,10 +7503,14 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                 if (!formCarta.destino || !formCarta.fechaIda) { mostrarToast("Completa destino y fecha.", "error"); return; }
                 if (formCarta.fechaRegreso && formCarta.fechaIda && formCarta.fechaRegreso < formCarta.fechaIda) { mostrarToast("La fecha de regreso no puede ser antes de la salida.", "error"); return; }
                 if (!formCarta.padre1Nombre) { mostrarToast("Los datos de los padres están vacíos.", "error"); return; }
+                if (formCarta.acompañanteTipo === "padre1" && !formCarta.padre2Nombre) { mostrarToast("Falta el nombre del padre/madre que firma la autorización.", "error"); return; }
+                if (formCarta.acompañanteTipo === "padre2" && !formCarta.padre1Nombre) { mostrarToast("Falta el nombre del padre/madre que firma la autorización.", "error"); return; }
+                if (formCarta.acompañanteTipo === "otro" && !formCarta.acompañante) { mostrarToast("Escribe el nombre de la persona con quien viaja.", "error"); return; }
                 setCartaGenerada(true);
               };
               const imprimirCarta = () => {
                 const win = window.open("","_blank");
+                if (!win) { mostrarToast("Permite las ventanas emergentes para imprimir la carta.", "error"); return; }
                 const menores = menoresSel.length ? menoresSel : (hijo ? [hijo] : []);
                 const dq = '"';
                 const firmaBox = (nombre, cedula, label) => {
@@ -7513,55 +7525,68 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                 html += "<link href="+dq+"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"+dq+" rel="+dq+"stylesheet"+dq+">";
                 html += "<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:'Inter','Helvetica',sans-serif;color:#102650;background:#fff;line-height:1.7;font-size:14px}.page{max-width:760px;margin:0 auto;padding:50px 50px 40px}.brand-bar{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #102650;padding-bottom:18px;margin-bottom:28px}.brand{display:flex;align-items:center;gap:12px}.brand-icon{width:46px;height:46px;background:#102650;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:7px}.brand-name{font-size:20px;font-weight:900;letter-spacing:.04em;line-height:1}.brand-tagline{font-size:9px;color:#4A5C75;letter-spacing:.18em;text-transform:uppercase;font-weight:700;margin-top:6px}.brand-meta{text-align:right;font-size:10px;color:#6B7B92}.brand-meta strong{display:block;color:#102650;font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}h1{font-size:26px;font-weight:800;color:#102650;letter-spacing:-.02em;line-height:1.15;margin-bottom:6px}.sub{font-size:12px;color:#4A5C75;font-weight:600;margin-bottom:26px}.info-bar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:26px}.info-cell{background:#F4F7FB;border:1px solid #DCE7F2;border-radius:8px;padding:14px 16px}.info-lbl{font-size:9px;color:#6B7B92;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-bottom:4px}.info-val{font-size:14px;color:#102650;font-weight:700}p{margin-bottom:12px}.dato{font-weight:700;color:#102650}.slabel{font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#1E40AF;margin-top:24px;margin-bottom:6px}.firma{display:inline-block;width:230px;margin-right:36px;margin-top:40px;vertical-align:top}.firma-line{border-top:1.5px solid #102650;margin-top:56px;padding-top:8px;font-size:13px}.notario{margin-top:42px;padding:18px 20px;background:#F4F7FB;border:1px solid #DCE7F2;border-radius:10px;min-height:90px}.footer{margin-top:48px;padding-top:16px;border-top:1px solid #DCE7F2;display:flex;justify-content:space-between;font-size:10px;color:#6B7B92}.footer-brand{font-weight:700;color:#102650}@page{margin:0;size:A4}@media print{.page{padding:30px 30px}}</style></head><body><div class="+dq+"page"+dq+">";
                 html += "<div class="+dq+"brand-bar"+dq+"><div class="+dq+"brand-meta"+dq+" style="+dq+"text-align:left"+dq+"><strong>Documento</strong>"+new Date().toLocaleDateString('es-PA',{year:'numeric',month:'long',day:'numeric'})+"</div><div style="+dq+"display:flex;align-items:center;gap:7px;opacity:.9"+dq+"><div style="+dq+"width:24px;height:24px;background:#102650;border-radius:6px;display:flex;align-items:center;justify-content:center;padding:4px"+dq+"><svg viewBox="+dq+"0 0 100 100"+dq+" xmlns="+dq+"http://www.w3.org/2000/svg"+dq+" style="+dq+"width:100%;height:100%;display:block"+dq+"><rect x="+dq+"20"+dq+" y="+dq+"20"+dq+" width="+dq+"10"+dq+" height="+dq+"60"+dq+" rx="+dq+"5"+dq+" fill="+dq+"#FFFFFF"+dq+"/><rect x="+dq+"36"+dq+" y="+dq+"20"+dq+" width="+dq+"10"+dq+" height="+dq+"60"+dq+" rx="+dq+"5"+dq+" fill="+dq+"#FFFFFF"+dq+"/><rect x="+dq+"52"+dq+" y="+dq+"20"+dq+" width="+dq+"10"+dq+" height="+dq+"60"+dq+" rx="+dq+"5"+dq+" fill="+dq+"#FFFFFF"+dq+"/><rect x="+dq+"68"+dq+" y="+dq+"20"+dq+" width="+dq+"10"+dq+" height="+dq+"60"+dq+" rx="+dq+"5"+dq+" fill="+dq+"#FFFFFF"+dq+"/><rect x="+dq+"12"+dq+" y="+dq+"44.5"+dq+" width="+dq+"78"+dq+" height="+dq+"11"+dq+" rx="+dq+"5.5"+dq+" fill="+dq+"#9ACDFC"+dq+" transform="+dq+"rotate(-15 51 50)"+dq+"/></svg></div><span style="+dq+"font-size:9px;font-weight:800;letter-spacing:.12em;color:#94A3B8"+dq+">SIN CONTADOR</span></div></div>";
-                html += "<h1>Autorización de Viaje de Menor de Edad</h1>";
+                const nH = menores.length;
+                html += "<h1>Autorización de Viaje de "+(nH>1?"Menores":"Menor")+" de Edad</h1>";
                 html += "<div class="+dq+"sub"+dq+">República de Panamá · Decreto Ley No. 30 de 2008</div>";
-                html += "<div class="+dq+"info-bar"+dq+">";
-                const nombresMenores = menores.length ? menores.map(m => esc(m.nombre||"—")).join(", ") : "—";
-                const pasaportesMenores = menores.length ? menores.map(m => esc(m.pasaporte||"—")).join(", ") : "—";
-                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">"+(menores.length>1?"Menores":"Menor")+"</div><div class="+dq+"info-val"+dq+">"+nombresMenores+"</div></div>";
-                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">"+(menores.length>1?"Pasaportes":"Pasaporte")+"</div><div class="+dq+"info-val"+dq+">"+pasaportesMenores+"</div></div>";
-                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">Destino</div><div class="+dq+"info-val"+dq+">"+esc(formCarta.destino||"—")+"</div></div>";
-                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">Fechas</div><div class="+dq+"info-val"+dq+">"+(formCarta.fechaIda?fmtFecha(formCarta.fechaIda):"—")+(formCarta.fechaRegreso?" — "+fmtFecha(formCarta.fechaRegreso):"")+"</div></div>";
-                html += "</div>";
-                // Solo mencionar a quien firma (quien se queda)
-                const tipo2 = formCarta.acompañanteTipo;
-                const dosFirmantes = (tipo2 !== "padre1" && tipo2 !== "padre2" && !!formCarta.padre2Nombre);
-                html += "<p>"+(dosFirmantes ? "Nosotros, " : "Yo, ");
-                if (tipo2 === "padre2") {
-                  // Viaja con Mamá → solo firma Papá
-                  html += "<span class="+dq+"dato"+dq+">"+esc(formCarta.padre1Nombre.toUpperCase())+"</span>";
-                  if (formCarta.padre1Cedula) html += ", cédula "+esc(formCarta.padre1Cedula);
-                } else if (tipo2 === "padre1") {
-                  // Viaja con Papá → solo firma Mamá
-                  html += "<span class="+dq+"dato"+dq+">"+esc(formCarta.padre2Nombre.toUpperCase())+"</span>";
-                  if (formCarta.padre2Cedula) html += ", cédula "+esc(formCarta.padre2Cedula);
-                } else {
-                  // Viaja solo u con otro → firman ambos
-                  html += "<span class="+dq+"dato"+dq+">"+esc(formCarta.padre1Nombre.toUpperCase())+"</span>";
-                  if (formCarta.padre1Cedula) html += ", cédula "+esc(formCarta.padre1Cedula);
-                  if (formCarta.padre2Nombre) { html += ", y <span class="+dq+"dato"+dq+">"+esc(formCarta.padre2Nombre.toUpperCase())+"</span>"; if (formCarta.padre2Cedula) html += ", cédula "+esc(formCarta.padre2Cedula); }
-                }
-                const fMenor = (m) => "<span class="+dq+"dato"+dq+">"+esc(m.nombre||"[Menor]")+"</span>"+(m.pasaporte?" (pasaporte "+esc(m.pasaporte)+")":"");
-                const listaM = menores.length ? menores.map(fMenor) : ["<span class="+dq+"dato"+dq+">[Menor]</span>"];
-                const menoresFrase = listaM.length === 1 ? "al menor "+listaM[0] : "a los menores "+listaM.slice(0,-1).join(", ")+" y "+listaM[listaM.length-1];
-                html += ", "+(dosFirmantes ? "autorizamos" : "autorizo")+" "+menoresFrase;
-                html += " a viajar";
-                if (formCarta.acompañante) html += " con <span class="+dq+"dato"+dq+">"+esc(formCarta.acompañante.toUpperCase())+"</span>"+(formCarta.acompañanteRelacion?" ("+esc(formCarta.acompañanteRelacion)+")":"");
-                else html += " sin acompañante adulto";
-                html += " a <span class="+dq+"dato"+dq+">"+esc(formCarta.destino)+"</span>.</p>";
-                if (formCarta.vuelo || formCarta.aerolinea || formCarta.fechaIda) { html += "<p class="+dq+"slabel"+dq+">Detalles del viaje</p><p>"; if (formCarta.aerolinea) html += "Aerolínea: <strong>"+esc(formCarta.aerolinea)+"</strong>"; if (formCarta.vuelo) html += (formCarta.aerolinea?" · ":"")+"Vuelo: <strong>"+esc(formCarta.vuelo)+"</strong>"; if (formCarta.fechaIda) html += "<br>Salida: <strong>"+fmtFecha(formCarta.fechaIda)+"</strong>"; if (formCarta.fechaRegreso) html += " · Regreso: <strong>"+fmtFecha(formCarta.fechaRegreso)+"</strong>"; html += "</p>"; }
-                if (formCarta.notas) html += "<p class="+dq+"slabel"+dq+">Observaciones</p><p>"+esc(formCarta.notas)+"</p>";
-                const hoy3 = new Date(); const meses3 = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-                html += "<p style="+dq+"margin-top:24px"+dq+">Esta autorización es otorgada en la ciudad de Panamá a los <strong>"+hoy3.getDate()+(hoy3.getDate()===1?" día":" días")+" del mes de "+meses3[hoy3.getMonth()]+" de "+hoy3.getFullYear()+"</strong>.</p>";
-                html += "<div style="+dq+"margin-top:48px"+dq+">";
+                // Encabezado dirigido a Migración (formato oficial Tocumen)
+                const hoyTxt = new Date().toLocaleDateString('es-PA',{year:'numeric',month:'long',day:'numeric'});
+                html += "<p style='margin-bottom:18px'>Panamá, Rep. de Panamá<br>"+hoyTxt+"</p>";
+                html += "<p style='margin-bottom:18px'><strong>Señor Director</strong><br>Servicio Nacional de Migración<br>Aeropuerto Int'l de Tocumen<br>Ciudad de Panamá</p>";
+                html += "<p>Estimados Señores:</p>";
+                // Determinar firmantes y acompañante
                 const tipo = formCarta.acompañanteTipo;
-                const p1l = padres.padre1.genero==="F"?"Madre":"Padre";
-                const p2l = padres.padre2.genero==="F"?"Madre":"Padre";
-                if (tipo==="padre1") { if (formCarta.padre2Nombre) html += firmaBox(formCarta.padre2Nombre, formCarta.padre2Cedula, p2l); }
-                else if (tipo==="padre2") { html += firmaBox(formCarta.padre1Nombre, formCarta.padre1Cedula, p1l); }
-                else { html += firmaBox(formCarta.padre1Nombre, formCarta.padre1Cedula, p1l); if (formCarta.padre2Nombre) html += firmaBox(formCarta.padre2Nombre, formCarta.padre2Cedula, p2l); }
+                const g1 = padres.padre1.genero==="F"?"F":"M";
+                const g2 = padres.padre2.genero==="F"?"F":"M";
+                const rolDe = (g) => g==="F" ? "Madre" : "Padre";
+                let firmantes = [], compania = "";
+                if (tipo==="padre1") {
+                  firmantes = [{ n:formCarta.padre2Nombre, c:formCarta.padre2Cedula, g:g2 }];
+                  compania = "en compañía de "+(g1==="F"?"su madre ":"su padre ")+"<span class='dato'>"+esc(formCarta.padre1Nombre)+"</span>"+(formCarta.padre1Cedula?" con C.I.P. No. "+esc(formCarta.padre1Cedula):"");
+                } else if (tipo==="padre2") {
+                  firmantes = [{ n:formCarta.padre1Nombre, c:formCarta.padre1Cedula, g:g1 }];
+                  compania = "en compañía de "+(g2==="F"?"su madre ":"su padre ")+"<span class='dato'>"+esc(formCarta.padre2Nombre)+"</span>"+(formCarta.padre2Cedula?" con C.I.P. No. "+esc(formCarta.padre2Cedula):"");
+                } else {
+                  firmantes = [{ n:formCarta.padre1Nombre, c:formCarta.padre1Cedula, g:g1 }];
+                  if (formCarta.padre2Nombre) firmantes.push({ n:formCarta.padre2Nombre, c:formCarta.padre2Cedula, g:g2 });
+                  if (tipo==="otro" && formCarta.acompañante) compania = "en compañía de <span class='dato'>"+esc(formCarta.acompañante)+"</span>"+(formCarta.acompañanteRelacion?" ("+esc(formCarta.acompañanteRelacion)+")":"")+(formCarta.acompañantePasaporte?" con documento No. "+esc(formCarta.acompañantePasaporte):"");
+                  else compania = "sin compañía de un adulto";
+                }
+                const dos = firmantes.length>1;
+                const rolFirmantes = dos ? "Padres Legales" : (rolDe(firmantes[0].g)+" Legal");
+                // Palabra hija/hijo según sexo y cantidad
+                const allF = nH ? menores.every(m=>(m.genero||"F")==="F") : true;
+                const hijoWord = nH===1 ? ((menores[0]&&(menores[0].genero||"F")==="F")?"hija":"hijo") : (allF?"hijas":"hijos");
+                const posesivo = dos ? (nH===1?(hijoWord==="hija"?"nuestra":"nuestro"):(allF?"nuestras":"nuestros")) : (nH===1?"mi":"mis");
+                const hijosFrase = posesivo+" "+hijoWord;
+                const firmTxt = firmantes.map(f => "<span class='dato'>"+esc(f.n)+"</span>"+(f.c?" con C.I.P. No. "+esc(f.c):"")).join(", y ");
+                // Vuelos y fechas
+                const vIda = formCarta.vuelo ? ("en el vuelo "+(formCarta.aerolinea?"de "+esc(formCarta.aerolinea)+" ":"")+"No. "+esc(formCarta.vuelo)) : "";
+                const vReg = formCarta.vueloRegreso ? ("en el vuelo "+(formCarta.aerolinea?"de "+esc(formCarta.aerolinea)+" ":"")+"No. "+esc(formCarta.vueloRegreso)) : "";
+                const fIda = formCarta.fechaIda ? fmtFecha(formCarta.fechaIda) : "";
+                const fReg = formCarta.fechaRegreso ? fmtFecha(formCarta.fechaRegreso) : "";
+                let cuerpo = "Por este medio, "+(dos?"Nosotros, ":"Yo, ")+firmTxt+", actuando como "+rolFirmantes+" de "+hijosFrase+", "+(dos?"autorizamos":"autorizo")+" que "+(nH===1?"viaje":"viajen")+" "+compania;
+                if (vIda) cuerpo += " "+vIda;
+                if (formCarta.destino) cuerpo += " con destino a <span class='dato'>"+esc(formCarta.destino)+"</span>";
+                if (fIda) cuerpo += " el día <strong>"+fIda+"</strong>";
+                if (fReg && vReg) cuerpo += ", retornando a Panamá el <strong>"+fReg+"</strong> "+vReg;
+                else if (fReg) cuerpo += ", retornando a Panamá el <strong>"+fReg+"</strong>";
+                else if (vReg) cuerpo += ", retornando a Panamá "+vReg;
+                cuerpo += ".";
+                html += "<p style='margin-top:14px'>"+cuerpo+"</p>";
+                // Tabla de menores
+                html += "<p style='margin-top:18px'>A continuación, los datos de "+hijosFrase+":</p>";
+                const calcEdad = (fn) => { if(!fn) return "—"; const h2=new Date(),nac=new Date(fn); let a=h2.getFullYear()-nac.getFullYear(); if(h2<new Date(h2.getFullYear(),nac.getMonth(),nac.getDate()))a--; return a+(a===1?" año":" años"); };
+                html += "<table style='width:100%;border-collapse:collapse;margin:14px 0 8px;font-size:13px'>";
+                html += "<thead><tr style='background:#102650;color:#fff'><th style='text-align:left;padding:9px 12px'>Menor</th><th style='text-align:left;padding:9px 12px'>Edad</th><th style='text-align:left;padding:9px 12px'>Cédula No.</th><th style='text-align:left;padding:9px 12px'>Pasaporte No.</th></tr></thead><tbody>";
+                menores.forEach((m,i) => { html += "<tr style='border-bottom:1px solid #DCE7F2;background:"+(i%2?"#F8FAFC":"#fff")+"'><td style='padding:9px 12px;font-weight:600;color:#102650'>"+esc(m.nombre||"—")+"</td><td style='padding:9px 12px'>"+calcEdad(m.fechaNacimiento)+"</td><td style='padding:9px 12px'>"+esc(m.cedula||"—")+"</td><td style='padding:9px 12px'>"+esc(m.pasaporte||"—")+"</td></tr>"; });
+                html += "</tbody></table>";
+                html += "<p style='margin-top:18px'>Agradecemos de antemano toda la atención que puedan "+(nH===1?"brindarle":"brindarles")+" a "+hijosFrase+" durante el proceso migratorio de salida del país con esta debida certificación.</p>";
+                if (formCarta.notas) html += "<p class='slabel'>Observaciones</p><p>"+esc(formCarta.notas)+"</p>";
+                html += "<p style='margin-top:22px'>Muy atentamente,</p>";
+                html += "<div style='margin-top:30px'>";
+                firmantes.forEach(f => { html += firmaBox(f.n, f.c, rolDe(f.g)+" Legal"); });
                 html += "</div><div class="+dq+"notario"+dq+"><p class="+dq+"slabel"+dq+" style="+dq+"margin-top:0"+dq+">Autenticación Notarial</p><p style="+dq+"font-size:12px;color:#6B7B92;margin-bottom:0"+dq+">Notaría N: ________ Fecha: ________ Tomo: ____ Folio: ____</p></div>";
-                html += "<div class="+dq+"footer"+dq+"><div>Decreto Ley No. 30 de 2008</div></div>";
+                html += "<div class="+dq+"footer"+dq+"><div>Decreto Ley No. 30 de 2008 · Servicio Nacional de Migración</div></div>";
                 html += "</div></body></html>";
                 win.document.write(html); win.document.close();
                 setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 600);
@@ -7638,7 +7663,8 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                         const data = await res.json();
                         if (!data.error && data.destino) setFormCarta(fc => ({ ...fc, aerolinea: data.aerolinea||fc.aerolinea, destino: data.destino+(data.iata?" ("+data.iata+")":""), fechaIda: data.fechaIda||fc.fechaIda }));
                       } catch(e2) {}
-                    }} placeholder="Vuelo — se autocompleta" style={{ padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/>
+                    }} placeholder="Vuelo de ida — se autocompleta" style={{ padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/>
+                    <input value={formCarta.vueloRegreso} onChange={e=>setFormCarta(f=>({...f,vueloRegreso:e.target.value}))} placeholder="Vuelo de regreso (opcional)" style={{ padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/>
                     <input value={formCarta.aerolinea} onChange={e=>setFormCarta(f=>({...f,aerolinea:e.target.value}))} placeholder="Aerolínea" style={{ padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                       <div><div style={{ fontSize: 12, fontWeight: 600, color: "#102650", marginBottom: 4 }}>Fecha ida *</div><input type="date" value={formCarta.fechaIda} onChange={e=>setFormCarta(f=>({...f,fechaIda:e.target.value}))} style={{ width: "100%", padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/></div>
@@ -7664,6 +7690,10 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                           : <><strong>{formCarta.padre1Nombre.toUpperCase()}</strong>{formCarta.padre1Cedula?", cédula "+formCarta.padre1Cedula:""}{formCarta.padre2Nombre?", y "+formCarta.padre2Nombre.toUpperCase()+(formCarta.padre2Cedula?", cédula "+formCarta.padre2Cedula:""):""}</>
                         }{", "}{(formCarta.acompañanteTipo !== "padre1" && formCarta.acompañanteTipo !== "padre2" && formCarta.padre2Nombre) ? "autorizamos" : "autorizo"} {menoresSel.length>1?"a los menores ":"al menor "}<strong>{menoresSel.map(m=>m.nombre).join(", ").replace(/,([^,]*)$/, " y$1")}</strong> a viajar{formCarta.acompañante?" con "+formCarta.acompañante:" sin acompañante adulto"} a <strong>{formCarta.destino}</strong>.</p>
                       {formCarta.fechaIda && <p style={{ marginTop: 12 }}>{formCarta.aerolinea&&<><strong>{formCarta.aerolinea}</strong> · </>}{formCarta.vuelo&&<>Vuelo <strong>{formCarta.vuelo}</strong> · </>}Salida <strong>{fmtFecha(formCarta.fechaIda)}</strong>{formCarta.fechaRegreso&&<> · Regreso <strong>{fmtFecha(formCarta.fechaRegreso)}</strong></>}</p>}
+                      {menoresSel.length>0 && <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 14, fontSize: 12 }}>
+                        <thead><tr style={{ background: "#102650", color: "#fff" }}><th style={{ textAlign: "left", padding: "7px 9px" }}>Menor</th><th style={{ textAlign: "left", padding: "7px 9px" }}>Edad</th><th style={{ textAlign: "left", padding: "7px 9px" }}>Cédula</th><th style={{ textAlign: "left", padding: "7px 9px" }}>Pasaporte</th></tr></thead>
+                        <tbody>{menoresSel.map(m => { const ed = m.fechaNacimiento ? (() => { const h2=new Date(),nc=new Date(m.fechaNacimiento); let a=h2.getFullYear()-nc.getFullYear(); if(h2<new Date(h2.getFullYear(),nc.getMonth(),nc.getDate()))a--; return a+(a===1?" año":" años"); })() : "—"; return <tr key={m.id} style={{ borderBottom: "1px solid #E8F0EA" }}><td style={{ padding: "7px 9px", fontWeight: 600 }}>{m.nombre}</td><td style={{ padding: "7px 9px" }}>{ed}</td><td style={{ padding: "7px 9px", color: m.cedula?"#102650":"#B5451B" }}>{m.cedula||"falta"}</td><td style={{ padding: "7px 9px", color: m.pasaporte?"#102650":"#B5451B" }}>{m.pasaporte||"falta"}</td></tr>; })}</tbody>
+                      </table>}
                     </div>
                     <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #E8F0EA", display: "flex", gap: 20, flexWrap: "wrap" }}>
                       {formCarta.acompañanteTipo !== "padre1" && <div style={{ minWidth: 160 }}><div style={{ borderTop: "1.5px solid #111", paddingTop: 8, marginTop: 48 }}><div style={{ fontWeight: 700, fontSize: 13 }}>{formCarta.padre1Nombre.toUpperCase()}</div>{formCarta.padre1Cedula&&<div style={{ fontSize: 11, color: C.muted }}>Cédula: {formCarta.padre1Cedula}</div>}<div style={{ fontSize: 11, color: C.muted }}>{padres.padre1.genero==="F"?"Madre":"Padre"}</div></div></div>}
