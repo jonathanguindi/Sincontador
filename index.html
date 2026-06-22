@@ -7491,6 +7491,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
               const generarCarta = () => {
                 if (!formCarta.acompañanteTipo) { mostrarToast("Selecciona con quién viaja el menor.", "error"); return; }
                 if (!formCarta.destino || !formCarta.fechaIda) { mostrarToast("Completa destino y fecha.", "error"); return; }
+                if (formCarta.fechaRegreso && formCarta.fechaIda && formCarta.fechaRegreso < formCarta.fechaIda) { mostrarToast("La fecha de regreso no puede ser antes de la salida.", "error"); return; }
                 if (!formCarta.padre1Nombre) { mostrarToast("Los datos de los padres están vacíos.", "error"); return; }
                 setCartaGenerada(true);
               };
@@ -7620,7 +7621,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                     <input value={formCarta.aerolinea} onChange={e=>setFormCarta(f=>({...f,aerolinea:e.target.value}))} placeholder="Aerolínea" style={{ padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                       <div><div style={{ fontSize: 12, fontWeight: 600, color: "#102650", marginBottom: 4 }}>Fecha ida *</div><input type="date" value={formCarta.fechaIda} onChange={e=>setFormCarta(f=>({...f,fechaIda:e.target.value}))} style={{ width: "100%", padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/></div>
-                      <div><div style={{ fontSize: 12, fontWeight: 600, color: "#102650", marginBottom: 4 }}>Regreso</div><input type="date" value={formCarta.fechaRegreso} onChange={e=>setFormCarta(f=>({...f,fechaRegreso:e.target.value}))} style={{ width: "100%", padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/></div>
+                      <div><div style={{ fontSize: 12, fontWeight: 600, color: "#102650", marginBottom: 4 }}>Regreso</div><input type="date" min={formCarta.fechaIda||undefined} value={formCarta.fechaRegreso} onChange={e=>setFormCarta(f=>({...f,fechaRegreso:e.target.value}))} style={{ width: "100%", padding: "12px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 14, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}/></div>
                     </div>
                     <textarea value={formCarta.notas} onChange={e=>setFormCarta(f=>({...f,notas:e.target.value}))} placeholder="Observaciones opcionales" style={{ padding: "10px 14px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 13, fontFamily: "'Inter',sans-serif", minHeight: 60, resize: "vertical", outline: "none" }}/>
                   </div>
