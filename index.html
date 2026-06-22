@@ -3137,7 +3137,7 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
   const [vistaHogar, setVistaHogar] = useState("lista");
   const [formHijo, setFormHijo] = useState({ id:null, nombre:"", fechaNacimiento:"", colegio:"", notas:"", pasaporte:"", pasaporteVence:"", pasaporteFoto:null, cedula:"", nacionalidad:"" });
   const [formGasto, setFormGasto] = useState({ id:null, nombre:"", monto:"", categoria:"hogar", hijoId:"", frecuencia:"mensual", activo:true });
-  const cartaVacia = { hijoId:"", acompañanteTipo:"", acompañante:"", acompañanteRelacion:"", acompañantePasaporte:"", padre1Nombre:"", padre1Cedula:"", padre2Nombre:"", padre2Cedula:"", vuelo:"", aerolinea:"", destino:"", fechaIda:"", fechaRegreso:"", firmaBoth:true, notas:"" };
+  const cartaVacia = { hijoIds:[], acompañanteTipo:"", acompañante:"", acompañanteRelacion:"", acompañantePasaporte:"", padre1Nombre:"", padre1Cedula:"", padre2Nombre:"", padre2Cedula:"", vuelo:"", aerolinea:"", destino:"", fechaIda:"", fechaRegreso:"", firmaBoth:true, notas:"" };
   const [formCarta, setFormCarta] = useState(cartaVacia);
   const [cartaGenerada, setCartaGenerada] = useState(false);
   const [empActivo, setEmpActivo] = useState(null);
@@ -7407,7 +7407,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <Btn small variant="outline" onClick={() => { setFormCarta({ ...cartaVacia, hijoId:String(h.id), padre1Nombre:padres.padre1.nombre, padre1Cedula:padres.padre1.cedula, padre2Nombre:padres.padre2.nombre, padre2Cedula:padres.padre2.cedula }); setCartaGenerada(false); setVistaHogar("carta"); }}>✈ Carta</Btn>
+                      <Btn small variant="outline" onClick={() => { setFormCarta({ ...cartaVacia, hijoIds:[String(h.id)], padre1Nombre:padres.padre1.nombre, padre1Cedula:padres.padre1.cedula, padre2Nombre:padres.padre2.nombre, padre2Cedula:padres.padre2.cedula }); setCartaGenerada(false); setVistaHogar("carta"); }}>✈ Carta</Btn>
                       <Btn small variant="outline" onClick={() => { setFormHijo(h); setVistaHogar("formHijo"); }}>Editar</Btn>
                       <Btn small variant="danger" onClick={() => eliminarHijo(h.id)}>✕</Btn>
                     </div>
@@ -7486,9 +7486,11 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
 
             {/* ── CARTA DE VIAJE ── */}
             {vistaHogar === "carta" && (() => {
-              const hijo = hijos.find(h => String(h.id) === formCarta.hijoId);
+              const menoresSel = hijos.filter(h => (formCarta.hijoIds||[]).includes(String(h.id)));
+              const hijo = menoresSel[0] || null;
               const fmtFecha = (d) => { if(!d) return ""; const [y,m,dia] = d.split("-"); const meses2=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]; return parseInt(dia)+" de "+meses2[parseInt(m)-1]+" de "+y; };
               const generarCarta = () => {
+                if (!(formCarta.hijoIds||[]).length) { mostrarToast("Selecciona al menos un menor.", "error"); return; }
                 if (!formCarta.acompañanteTipo) { mostrarToast("Selecciona con quién viaja el menor.", "error"); return; }
                 if (!formCarta.destino || !formCarta.fechaIda) { mostrarToast("Completa destino y fecha.", "error"); return; }
                 if (formCarta.fechaRegreso && formCarta.fechaIda && formCarta.fechaRegreso < formCarta.fechaIda) { mostrarToast("La fecha de regreso no puede ser antes de la salida.", "error"); return; }
@@ -7497,7 +7499,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
               };
               const imprimirCarta = () => {
                 const win = window.open("","_blank");
-                const h = hijo || {};
+                const menores = menoresSel.length ? menoresSel : (hijo ? [hijo] : []);
                 const dq = '"';
                 const firmaBox = (nombre, cedula, label) => {
                   let s = "<div class="+dq+"firma"+dq+">";
@@ -7514,8 +7516,10 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                 html += "<h1>Autorización de Viaje de Menor de Edad</h1>";
                 html += "<div class="+dq+"sub"+dq+">República de Panamá · Decreto Ley No. 30 de 2008</div>";
                 html += "<div class="+dq+"info-bar"+dq+">";
-                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">Menor</div><div class="+dq+"info-val"+dq+">"+esc(h.nombre||"—")+"</div></div>";
-                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">Pasaporte</div><div class="+dq+"info-val"+dq+">"+esc(h.pasaporte||"—")+"</div></div>";
+                const nombresMenores = menores.length ? menores.map(m => esc(m.nombre||"—")).join(", ") : "—";
+                const pasaportesMenores = menores.length ? menores.map(m => esc(m.pasaporte||"—")).join(", ") : "—";
+                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">"+(menores.length>1?"Menores":"Menor")+"</div><div class="+dq+"info-val"+dq+">"+nombresMenores+"</div></div>";
+                html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">"+(menores.length>1?"Pasaportes":"Pasaporte")+"</div><div class="+dq+"info-val"+dq+">"+pasaportesMenores+"</div></div>";
                 html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">Destino</div><div class="+dq+"info-val"+dq+">"+esc(formCarta.destino||"—")+"</div></div>";
                 html += "<div class="+dq+"info-cell"+dq+"><div class="+dq+"info-lbl"+dq+">Fechas</div><div class="+dq+"info-val"+dq+">"+(formCarta.fechaIda?fmtFecha(formCarta.fechaIda):"—")+(formCarta.fechaRegreso?" — "+fmtFecha(formCarta.fechaRegreso):"")+"</div></div>";
                 html += "</div>";
@@ -7537,8 +7541,10 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                   if (formCarta.padre1Cedula) html += ", cédula "+esc(formCarta.padre1Cedula);
                   if (formCarta.padre2Nombre) { html += ", y <span class="+dq+"dato"+dq+">"+esc(formCarta.padre2Nombre.toUpperCase())+"</span>"; if (formCarta.padre2Cedula) html += ", cédula "+esc(formCarta.padre2Cedula); }
                 }
-                html += ", "+(dosFirmantes ? "autorizamos" : "autorizo")+" al menor <span class="+dq+"dato"+dq+">"+esc(h.nombre||"[Menor]")+"</span>";
-                if (h.pasaporte) html += " (pasaporte "+esc(h.pasaporte)+")";
+                const fMenor = (m) => "<span class="+dq+"dato"+dq+">"+esc(m.nombre||"[Menor]")+"</span>"+(m.pasaporte?" (pasaporte "+esc(m.pasaporte)+")":"");
+                const listaM = menores.length ? menores.map(fMenor) : ["<span class="+dq+"dato"+dq+">[Menor]</span>"];
+                const menoresFrase = listaM.length === 1 ? "al menor "+listaM[0] : "a los menores "+listaM.slice(0,-1).join(", ")+" y "+listaM[listaM.length-1];
+                html += ", "+(dosFirmantes ? "autorizamos" : "autorizo")+" "+menoresFrase;
                 html += " a viajar";
                 if (formCarta.acompañante) html += " con <span class="+dq+"dato"+dq+">"+esc(formCarta.acompañante.toUpperCase())+"</span>"+(formCarta.acompañanteRelacion?" ("+esc(formCarta.acompañanteRelacion)+")":"");
                 else html += " sin acompañante adulto";
@@ -7563,16 +7569,28 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
               return <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
                   <Btn variant="ghost" small onClick={() => { setVistaHogar("lista"); setCartaGenerada(false); }}>← Volver</Btn>
-                  <div><h2 style={{ fontSize: 18, fontWeight: 700, color: "#102650" }}>✈ Carta de Viaje</h2>{hijo && <div style={{ fontSize: 12, color: C.muted }}>{hijo.nombre}</div>}</div>
+                  <div><h2 style={{ fontSize: 18, fontWeight: 700, color: "#102650" }}>✈ Carta de Viaje</h2>{menoresSel.length>0 && <div style={{ fontSize: 12, color: C.muted }}>{menoresSel.map(m=>m.nombre).join(", ")}</div>}</div>
                 </div>
                 {!cartaGenerada ? <>
                   <div style={{ background: "#fff", borderRadius: 16, padding: 16, border: "1px solid #E8F0EA", marginBottom: 12 }}>
-                    <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, marginBottom: 8 }}>🧒 Menor</div>
-                    <div style={{ background: "#F0F4FF", borderRadius: 10, padding: "12px 14px" }}>
-                      <div style={{ fontWeight: 700, color: "#102650" }}>{hijo ? hijo.nombre : "—"}</div>
-                      {hijo && hijo.pasaporte && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Pasaporte: {hijo.pasaporte}</div>}
-                      {hijo && !hijo.pasaporte && <div style={{ fontSize: 12, color: "#B5451B", marginTop: 2 }}>⚠ Sin pasaporte</div>}
-                    </div>
+                    <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, marginBottom: 8 }}>🧒 Menores <span style={{ textTransform: "none", letterSpacing: 0, fontWeight: 500 }}>(marca una o varias)</span></div>
+                    {hijos.length === 0
+                      ? <div style={{ fontSize: 13, color: "#B5451B" }}>No has agregado hijos todavía. Agrégalos primero en "Mi Hogar".</div>
+                      : hijos.map(h => {
+                          const sel = (formCarta.hijoIds||[]).includes(String(h.id));
+                          return <div key={h.id} onClick={() => setFormCarta(f => {
+                            const ids = (f.hijoIds||[]).slice();
+                            const idx = ids.indexOf(String(h.id));
+                            if (idx >= 0) ids.splice(idx, 1); else ids.push(String(h.id));
+                            return { ...f, hijoIds: ids };
+                          })} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: sel?"#102650":"#F8FAFC", borderRadius: 10, border: sel?"1.5px solid #102650":"1.5px solid #E8F0EA", marginBottom: 8, cursor: "pointer" }}>
+                            <div style={{ width: 22, height: 22, borderRadius: 6, border: sel?"none":"1.5px solid #CBD5E1", background: sel?"#9ACDFC":"#fff", color: "#102650", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, flexShrink: 0 }}>{sel?"✓":""}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 700, color: sel?"#fff":"#102650" }}>{h.nombre || "Sin nombre"}</div>
+                              <div style={{ fontSize: 11, color: sel?"#9ACDFC":(h.pasaporte?C.muted:"#B5451B") }}>{h.pasaporte ? ("Pasaporte: "+h.pasaporte) : "⚠ Sin pasaporte"}</div>
+                            </div>
+                          </div>;
+                        })}
                   </div>
                   <div style={{ background: "#fff", borderRadius: 16, padding: 16, border: "1px solid #E8F0EA", marginBottom: 12 }}>
                     <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: ".1em", fontWeight: 700, marginBottom: 12 }}>👥 ¿Con quién viaja?</div>
@@ -7644,7 +7662,7 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                           : formCarta.acompañanteTipo === "padre1"
                           ? <><strong>{formCarta.padre2Nombre.toUpperCase()}</strong>{formCarta.padre2Cedula?", cédula "+formCarta.padre2Cedula:""}</>
                           : <><strong>{formCarta.padre1Nombre.toUpperCase()}</strong>{formCarta.padre1Cedula?", cédula "+formCarta.padre1Cedula:""}{formCarta.padre2Nombre?", y "+formCarta.padre2Nombre.toUpperCase()+(formCarta.padre2Cedula?", cédula "+formCarta.padre2Cedula:""):""}</>
-                        }{", "}{(formCarta.acompañanteTipo !== "padre1" && formCarta.acompañanteTipo !== "padre2" && formCarta.padre2Nombre) ? "autorizamos" : "autorizo"} al menor <strong>{hijo?hijo.nombre:""}</strong> a viajar{formCarta.acompañante?" con "+formCarta.acompañante:" sin acompañante adulto"} a <strong>{formCarta.destino}</strong>.</p>
+                        }{", "}{(formCarta.acompañanteTipo !== "padre1" && formCarta.acompañanteTipo !== "padre2" && formCarta.padre2Nombre) ? "autorizamos" : "autorizo"} {menoresSel.length>1?"a los menores ":"al menor "}<strong>{menoresSel.map(m=>m.nombre).join(", ").replace(/,([^,]*)$/, " y$1")}</strong> a viajar{formCarta.acompañante?" con "+formCarta.acompañante:" sin acompañante adulto"} a <strong>{formCarta.destino}</strong>.</p>
                       {formCarta.fechaIda && <p style={{ marginTop: 12 }}>{formCarta.aerolinea&&<><strong>{formCarta.aerolinea}</strong> · </>}{formCarta.vuelo&&<>Vuelo <strong>{formCarta.vuelo}</strong> · </>}Salida <strong>{fmtFecha(formCarta.fechaIda)}</strong>{formCarta.fechaRegreso&&<> · Regreso <strong>{fmtFecha(formCarta.fechaRegreso)}</strong></>}</p>}
                     </div>
                     <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #E8F0EA", display: "flex", gap: 20, flexWrap: "wrap" }}>
