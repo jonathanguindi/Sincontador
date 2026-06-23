@@ -3130,6 +3130,22 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
   const [historial, setHistorial] = useState([]);
   const [vistaEmp, setVistaEmp] = useState("lista");
   const [menuPerfil, setMenuPerfil] = useState(false);
+  const [confirmBorrar, setConfirmBorrar] = useState(false);
+  const [borrandoCuenta, setBorrandoCuenta] = useState(false);
+  const eliminarCuenta = async () => {
+    setBorrandoCuenta(true);
+    try {
+      const { error } = await supabase.rpc('delete_user');
+      if (error) throw error;
+      setConfirmBorrar(false);
+      mostrarToast("Tu cuenta y tus datos fueron eliminados.", "success");
+      await supabase.auth.signOut();
+      onLogout();
+    } catch (e) {
+      setBorrandoCuenta(false);
+      mostrarToast("No se pudo eliminar la cuenta. Intenta de nuevo o escribe a hola@sincontador.app.", "error");
+    }
+  };
   // ─── MI HOGAR ──────────────────────────────────────────────────────────────
   const [hijos, setHijos] = useState([]);
   const [gastos, setGastos] = useState([]);
@@ -4923,9 +4939,23 @@ ${empleadasHTML}
                       <div style={{ fontSize: 14, fontWeight: 700, color: "#102650" }}>{nombreUsuario}</div>
                       <div style={{ fontSize: 11, color: "#6B7B92", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{(user && user.email) || ""}</div>
                     </div>
-                    <button onClick={() => { setMenuPerfil(false); onLogout(); }} style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: "none", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#B5451B", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>↪ Cerrar sesión</button>
+                    <button onClick={() => { setMenuPerfil(false); onLogout(); }} style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: "none", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#102650", cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>↪ Cerrar sesión</button>
+                    <button onClick={() => { setMenuPerfil(false); setConfirmBorrar(true); }} style={{ width: "100%", textAlign: "left", padding: "10px 12px", background: "none", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, color: "#DC2626", cursor: "pointer", fontFamily: "'Inter',sans-serif", marginTop: 2, borderTop: "1px solid #EEF3F9" }}>🗑 Eliminar mi cuenta</button>
                   </div>
                 </>
+              )}
+              {confirmBorrar && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(16,38,80,.55)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+                  <div style={{ background: "#fff", borderRadius: 18, padding: 24, maxWidth: 380, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
+                    <div style={{ fontSize: 40, textAlign: "center", marginBottom: 8 }}>⚠️</div>
+                    <h3 style={{ fontSize: 18, fontWeight: 800, color: "#102650", textAlign: "center", marginBottom: 8 }}>¿Eliminar tu cuenta?</h3>
+                    <p style={{ fontSize: 14, color: "#4A5C75", textAlign: "center", lineHeight: 1.6, marginBottom: 20 }}>Esta acción es <strong>permanente</strong>. Se borrarán tu cuenta y todos tus datos (empleadas, pagos, historial, hijos). No se puede deshacer.</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <button onClick={eliminarCuenta} disabled={borrandoCuenta} style={{ padding: "13px", background: "#DC2626", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: borrandoCuenta?"default":"pointer", fontFamily: "'Inter',sans-serif", opacity: borrandoCuenta?0.6:1 }}>{borrandoCuenta ? "Eliminando..." : "Sí, eliminar mi cuenta"}</button>
+                      <button onClick={() => setConfirmBorrar(false)} disabled={borrandoCuenta} style={{ padding: "13px", background: "#F1F5F9", color: "#102650", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Cancelar</button>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           </div>
