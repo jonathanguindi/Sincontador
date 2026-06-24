@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="SinContador" />
 <meta name="theme-color" content="#102650" />
 <title>SinContador · La cuenta que sí cuadra | Pago de empleadas domésticas en Panamá</title>
-<meta name="description" content="Gestiona el pago de tu empleada doméstica sin contratar contador. Recibos legales, décimo, vacaciones, liquidaciones. Todo según la ley panameña. Prueba gratis 30 días." />
+<meta name="description" content="Gestiona el pago de tu empleada doméstica sin contratar contador. Recibos legales, décimo, vacaciones, liquidaciones. Todo según la ley panameña. Gratis." />
 <meta property="og:title" content="SinContador · La cuenta que sí cuadra" />
 <meta property="og:description" content="Pago de empleadas domésticas en Panamá, sin contratar contador. Recibos legales según Decreto 13 y CSS Ley 462." />
 <meta property="og:type" content="website" />
@@ -30,8 +30,8 @@
     { "@type": "Organization", "name": "SinContador", "url": "https://sincontador.app", "description": "Gestión del pago legal de empleadas domésticas en Panamá: recibos, décimo, vacaciones y liquidaciones.", "areaServed": "PA" },
     { "@type": "FAQPage", "mainEntity": [
       { "@type": "Question", "name": "¿Para quién es SinContador?", "acceptedAnswer": { "@type": "Answer", "text": "Para cualquier persona en Panamá que tenga empleada doméstica (también niñeras, cocineras, cuidadoras, jardineros) y necesite estar al día con la ley." } },
-      { "@type": "Question", "name": "¿Cómo funcionan los 30 días gratis?", "acceptedAnswer": { "@type": "Answer", "text": "Te registras con tu correo y usas todas las funciones sin restricciones, sin tarjeta de crédito. Al día 30 te avisamos para que elijas plan." } },
-      { "@type": "Question", "name": "¿Cuánto cuesta?", "acceptedAnswer": { "@type": "Answer", "text": "Plan anual $39.99/año o mensual $3.99/mes. Empleadas ilimitadas y todas las funciones incluidas." } },
+      { "@type": "Question", "name": "¿SinContador tiene algún costo?", "acceptedAnswer": { "@type": "Answer", "text": "No. SinContador es completamente gratis. Te registras con tu correo y usas todas las funciones sin restricciones y sin tarjeta de crédito." } },
+      { "@type": "Question", "name": "¿Cuánto cuesta?", "acceptedAnswer": { "@type": "Answer", "text": "Nada. SinContador es gratis: empleadas ilimitadas y todas las funciones incluidas, sin pagos." } },
       { "@type": "Question", "name": "¿Mis datos están seguros?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. Tu información se guarda encriptada en servidores de Supabase. El escaneo de cédula se procesa en tu dispositivo." } }
     ] }
   ]
@@ -970,7 +970,7 @@ body.view-legal { background: #fff; }
       <a href="#video" class="nav-link">Demo</a>
       <a href="#calculadora" class="nav-link">Calculadora</a>
       <a href="#features" class="nav-link">Funciones</a>
-      <a href="#precios" class="nav-link">Precios</a>
+      <a href="#precios" class="nav-link">Gratis</a>
       <a href="#faq" class="nav-link">Preguntas</a>
       <a href="#/app" class="btn btn-ghost">Iniciar sesión</a>
       <a href="#/app" class="btn btn-primary">Probar gratis</a>
@@ -986,7 +986,7 @@ body.view-legal { background: #fff; }
       <h1>Maneja el pago de tu empleada doméstica <span class="accent">sin contratar contador</span></h1>
       <p class="hero-sub">Recibos legales, décimo, vacaciones, liquidaciones. Todo según la ley panameña — Decreto 13, CSS Ley 462 y el Código de Trabajo. Sin Excel, sin errores, sin dolores de cabeza.</p>
       <div class="hero-ctas">
-        <a href="#/app" class="btn btn-primary btn-lg">Empezar gratis 30 días →</a>
+        <a href="#/app" class="btn btn-primary btn-lg">Empezar gratis →</a>
         <a href="#features" class="btn btn-ghost btn-lg">Ver cómo funciona</a>
       </div>
       <div class="hero-trust">
@@ -1177,7 +1177,7 @@ body.view-legal { background: #fff; }
         </div>
       </div>
       
-      <a href="#/app" class="calc-cta">Empezar gratis 30 días →</a>
+      <a href="#/app" class="calc-cta">Empezar gratis →</a>
       <div class="calc-disclaimer">
         Cálculo orientativo basado en CSS Ley 462. La app aplica la ley específica de tu región automáticamente.
       </div>
@@ -1340,49 +1340,25 @@ body.view-legal { background: #fff; }
 <!-- ════════════════════════════════════════════════════════════════ PRECIOS ══ -->
 <section id="precios">
   <div class="narrow" style="text-align:center; max-width:760px; margin:0 auto;">
-    <div class="section-eyebrow">Precios</div>
-    <h2 class="section-title">Cuesta menos que un café al mes</h2>
-    <p class="section-sub" style="margin:0 auto;">Empleadas ilimitadas. Todas las funciones incluidas. Sin sorpresas.</p>
+    <div class="section-eyebrow">Precio</div>
+    <h2 class="section-title">Completamente gratis</h2>
+    <p class="section-sub" style="margin:0 auto;">SinContador es gratis. Empleadas ilimitadas y todas las funciones incluidas, sin tarjeta de crédito y sin pagos.</p>
   </div>
-  
-  <div class="wrap pricing-cards">
-    <div class="price-card featured">
-      <div class="price-badge">AHORRA 16%</div>
-      <div class="price-card-eyebrow">Más popular</div>
-      <div class="price-name">Anual</div>
-      <div class="price-amount">
-        <span class="price-num">$39.99</span><span class="price-period">/año</span>
-      </div>
-      <div class="price-note">Solo $3.33/mes · Ahorras $7.89</div>
-      <ul class="price-list">
+
+  <div class="wrap" style="max-width:520px; margin:32px auto 0;">
+    <div class="price-card featured" style="text-align:center;">
+      <div class="price-card-eyebrow">Plan único</div>
+      <div class="price-name" style="font-size:30px; margin-top:6px;">Gratis</div>
+      <div class="price-note">Sin costo · Sin tarjeta · Sin compromisos</div>
+      <ul class="price-list" style="text-align:left; max-width:360px; margin:24px auto;">
         <li>Empleadas ilimitadas</li>
         <li>Recibos PDF + envío por WhatsApp</li>
         <li>Cálculo automático de décimo y vacaciones</li>
         <li>Liquidaciones y cartas legales</li>
         <li>Escaneo OCR de cédula</li>
-        <li>Soporte prioritario</li>
       </ul>
-      <a href="#/app" class="price-btn">Empezar 30 días gratis</a>
+      <a href="#/app" class="price-btn">Empezar gratis</a>
     </div>
-    
-    <div class="price-card">
-      <div class="price-card-eyebrow">Flexible</div>
-      <div class="price-name">Mensual</div>
-      <div class="price-amount">
-        <span class="price-num">$3.99</span><span class="price-period">/mes</span>
-      </div>
-      <div class="price-note">Cancela cuando quieras</div>
-      <ul class="price-list">
-        <li>Todas las funciones incluidas</li>
-        <li>Sin compromiso a largo plazo</li>
-        <li>Soporte por correo</li>
-      </ul>
-      <a href="#/app" class="price-btn">Empezar 30 días gratis</a>
-    </div>
-  </div>
-  
-  <div class="trial-banner">
-    🎁 Los primeros 30 días son gratis. No te pedimos tarjeta de crédito para probar.
   </div>
 </section>
 
@@ -1399,12 +1375,12 @@ body.view-legal { background: #fff; }
       <div>Para cualquier persona en Panamá que tenga empleada doméstica (también niñeras, cocineras, cuidadoras de adultos, jardineros). Si pagas un salario regular y necesitas estar al día con la ley, SinContador es para ti.</div>
     </details>
     <details>
-      <summary>¿Cómo funcionan los 30 días gratis?</summary>
-      <div>Te registras con tu correo y empiezas a usar TODAS las funciones sin restricciones. No te pedimos tarjeta de crédito al inicio. Al día 30 te avisamos para que elijas plan. Si no quieres seguir, simplemente no te suscribes y listo.</div>
+      <summary>¿SinContador tiene algún costo?</summary>
+      <div>No. SinContador es completamente gratis. Te registras con tu correo y usas TODAS las funciones sin restricciones y sin tarjeta de crédito.</div>
     </details>
     <details>
       <summary>¿Cuántas empleadas puedo registrar?</summary>
-      <div>Ilimitadas. Tanto en el plan mensual como en el anual. Si tienes 1 o si tienes 10, el precio es el mismo.</div>
+      <div>Ilimitadas. Tengas 1 o 10 empleadas, siempre es gratis.</div>
     </details>
     <details>
       <summary>¿Mis datos están seguros?</summary>
@@ -1413,14 +1389,6 @@ body.view-legal { background: #fff; }
     <details>
       <summary>¿Esto reemplaza a un abogado o contador?</summary>
       <div>SinContador automatiza los cálculos legales y genera documentos profesionales basados en la ley panameña vigente. Para casos complejos (despidos disputados, demandas, etc.) siempre te recomendamos consultar a un abogado laboral. Para el día a día (pagos, recibos, décimo, liquidaciones estándar), SinContador es suficiente.</div>
-    </details>
-    <details>
-      <summary>¿Cómo pago la suscripción?</summary>
-      <div>Con tarjeta de crédito o débito (Visa, MasterCard) procesada por Tilopay, el procesador de pagos panameño. Tu información de tarjeta nunca pasa por nuestros servidores.</div>
-    </details>
-    <details>
-      <summary>¿Puedo cancelar cuando quiera?</summary>
-      <div>Sí, en cualquier momento desde la app. No hay penalidades ni compromisos. Si cancelas el plan mensual a mitad de mes, sigues teniendo acceso hasta que termine el período pagado.</div>
     </details>
     <details>
       <summary>¿Puedo enviar los recibos a la empleada?</summary>
@@ -1432,7 +1400,7 @@ body.view-legal { background: #fff; }
 <!-- ════════════════════════════════════════════════════════════════ CTA FINAL ══ -->
 <section class="cta-final">
   <h2>Empieza a llevar todo claro en casa</h2>
-  <p>30 días gratis. Sin tarjeta de crédito. Cancela cuando quieras.</p>
+  <p>Completamente gratis. Sin tarjeta de crédito. Sin pagos.</p>
   <a href="#/app" class="btn btn-primary btn-lg">Crear mi cuenta gratis →</a>
 </section>
 
@@ -1465,7 +1433,7 @@ body.view-legal { background: #fff; }
         <h4>Producto</h4>
         <ul>
           <li><a href="#features">Funciones</a></li>
-          <li><a href="#precios">Precios</a></li>
+          <li><a href="#precios">Gratis</a></li>
           <li><a href="#faq">Preguntas</a></li>
           <li><a href="#/app">Iniciar sesión</a></li>
         </ul>
@@ -1603,26 +1571,23 @@ calcular();
       <li>Eres responsable de la veracidad de los datos que ingresas.</li>
     </ul>
 
-    <h2>4. Suscripción y pago</h2>
-    <p>Ofrecemos una prueba gratuita de 30 días sin tarjeta. Al terminar la prueba, puedes suscribirte al plan mensual o anual. Puedes cancelar cuando quieras; al cancelar, conservas acceso hasta el final del período pagado.</p>
+    <h2>4. Precio</h2>
+    <p>SinContador es actualmente gratuito. Usas todas las funciones sin costo y sin tarjeta de crédito. Si en el futuro ofrecemos planes de pago, te lo informaremos con anticipación y, en la app de iOS, cualquier compra se realizará mediante el sistema de compras dentro de la app de Apple (In-App Purchase).</p>
 
-    <h2>5. Reembolsos</h2>
-    <p>Si en los primeros 7 días desde tu primer pago no quedas satisfecho, escríbenos a <a href="mailto:soporte@sincontador.app">soporte@sincontador.app</a> y te devolvemos el dinero.</p>
-
-    <h2>6. Uso aceptable</h2>
+    <h2>5. Uso aceptable</h2>
     <ul>
       <li>No usar la app para fines ilegales.</li>
       <li>No intentar acceder a datos de otros usuarios.</li>
       <li>No revender ni copiar el servicio sin autorización.</li>
     </ul>
 
-    <h2>7. Limitación de responsabilidad</h2>
+    <h2>6. Limitación de responsabilidad</h2>
     <p>SinContador se ofrece "tal cual". Aunque hacemos nuestro mejor esfuerzo para que los cálculos sigan la ley panameña, no garantizamos que el servicio sea infalible. No nos hacemos responsables por sanciones, multas o pérdidas derivadas del uso de la información generada por la app. Verifica siempre los cálculos con un profesional cuando tengas dudas.</p>
 
-    <h2>8. Cambios al servicio</h2>
-    <p>Podemos modificar funciones, precios o estos términos. Te avisaremos por correo o dentro de la app cuando los cambios sean relevantes.</p>
+    <h2>7. Cambios al servicio</h2>
+    <p>Podemos modificar funciones o estos términos. Te avisaremos por correo o dentro de la app cuando los cambios sean relevantes.</p>
 
-    <h2>9. Ley aplicable</h2>
+    <h2>8. Ley aplicable</h2>
     <p>Estos términos se rigen por las leyes de la República de Panamá.</p>
 
     <h2>10. Contacto</h2>
