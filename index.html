@@ -7404,13 +7404,18 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <input value={p.nombre} onChange={e => setPadres(prev => ({ ...prev, [key]: { ...prev[key], nombre: e.target.value } }))} placeholder="Nombre completo" style={{ padding: "10px 12px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 13, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }} />
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                       <input value={p.cedula} onChange={e => setPadres(prev => ({ ...prev, [key]: { ...prev[key], cedula: e.target.value } }))} placeholder="Cédula" style={{ padding: "10px 12px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 13, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }} />
                       <input value={p.pasaporte||""} onChange={e => setPadres(prev => ({ ...prev, [key]: { ...prev[key], pasaporte: e.target.value } }))} placeholder="Pasaporte" style={{ padding: "10px 12px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 13, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }} />
-                      <select value={p.genero||"M"} onChange={e => setPadres(prev => ({ ...prev, [key]: { ...prev[key], genero: e.target.value } }))} style={{ padding: "10px 12px", border: "1.5px solid #E8F0EA", borderRadius: 8, fontSize: 13, fontFamily: "'Inter',sans-serif", color: "#102650", outline: "none" }}>
-                        <option value="M">Padre</option>
-                        <option value="F">Madre</option>
-                      </select>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 5 }}>¿Es el padre o la madre? <span style={{ color: "#B5451B" }}>(importante para la carta de viaje)</span></div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        {[["M","👨 Padre"],["F","👩 Madre"]].map(([g,l]) => {
+                          const sel = (p.genero||"M") === g;
+                          return <div key={g} onClick={() => setPadres(prev => ({ ...prev, [key]: { ...prev[key], genero: g } }))} style={{ flex: 1, textAlign: "center", padding: "11px", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 14, background: sel?"#102650":"#F8FAFC", color: sel?"#fff":"#102650", border: sel?"1.5px solid #102650":"1.5px solid #E8F0EA" }}>{l}</div>;
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>;
