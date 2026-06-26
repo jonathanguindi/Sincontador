@@ -3134,6 +3134,7 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
   const [liquidacionData, setLiquidacionData] = useState(null);
   // Modal personalizado de confirmación
   const [confirmModal, setConfirmModal] = useState(null);
+  const [borrarEmpId, setBorrarEmpId] = useState(null);
   const [montoAcordado, setMontoAcordado] = useState("");
   const [formLiq, setFormLiq] = useState({ motivo: "despido_injustificado", fechaSalida: hoy() });
   const empVacio = { id: null, nombre: "", puesto: "Empleada doméstica", region: "1", salario: "", fechaIngreso: "", correo: "", telefono: "", aplicaCSS: true, aplicaSegEdu: true, cedula: "", documentoFoto: null, documentoTipo: "Cédula", horasExtra: "0", horasExtraNocturnas: "0", diasAusencia: "0", bonos: "0", otrosDeduc: "0", notas: "", foto: null, aumentos: [], vacacionesPagadas: [], divisorSalario: 26 };
@@ -3501,14 +3502,15 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
     setVistaEmp("lista");
   };
 
-  const eliminarEmp = (id) => {
-    const emp = empleados.find(e => e.id === id);
-    if (!emp) return;
-    if (!confirm(`¿Eliminar a ${emp.nombre}?\n\nEsto borrará permanentemente:\n• El registro de la empleada\n• Su historial de pagos\n• Sus préstamos\n\nEsta acción NO se puede deshacer.`)) return;
+  const eliminarEmp = (id) => { setBorrarEmpId(id); };
+  const confirmarEliminarEmp = () => {
+    const id = borrarEmpId;
     setEmpleados(e => e.filter(x => x.id !== id));
     setPrestamos(p => p.filter(x => x.empleadoId !== id));
     setHistorial(h => h.filter(x => x.empId !== id));
+    setBorrarEmpId(null);
     setVistaEmp("lista");
+    mostrarToast("Empleada eliminada", "info");
   };
 
   // ── LIQUIDAR Y RECONTRATAR (mantener activa, resetear antigüedad) ──
@@ -4870,7 +4872,7 @@ ${empleadasHTML}
           </div>
         );
       })()}
-      <style>{`         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}         input,select,textarea{transition:border .15s;font-family:'Inter',sans-serif}         input:focus,select:focus,textarea:focus{border-color:#1E40AF!important;outline:none;box-shadow:0 0 0 3px rgba(30,64,175,0.12)}         .tab{font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:14px 0;background:transparent;border:none;border-bottom:2px solid transparent;color:rgba(220,231,242,.7);margin-right:20px;cursor:pointer;transition:all .15s;white-space:nowrap}         .tab.on{border-bottom-color:#fff;color:#fff;font-weight:700}         .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}         .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}         @media(max-width:560px){.g2{grid-template-columns:1fr}.g3{grid-template-columns:1fr 1fr 1fr}}         .emp-row{background:#fff;border:1px solid rgba(220,231,242,.5);border-radius:16px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;transition:all .2s}         .emp-row:active{transform:scale(.98)}         .vac-bar{height:4px;border-radius:2px;background:#DCE7F2;overflow:hidden;margin-top:6px}         .vac-bar-fill{height:100%;border-radius:2px;background:#1E40AF}       `}</style>
+      <style>{`         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}         input,select,textarea{transition:border .15s;font-family:'Inter',sans-serif}         input:focus,select:focus,textarea:focus{border-color:#1E40AF!important;outline:none;box-shadow:0 0 0 3px rgba(30,64,175,0.12)}         .tab{font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:14px 0;background:transparent;border:none;border-bottom:2px solid transparent;color:rgba(220,231,242,.7);margin-right:20px;cursor:pointer;transition:all .15s;white-space:nowrap}         .tab.on{border-bottom-color:#fff;color:#fff;font-weight:700}         .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}         .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}         @media(max-width:560px){.g2{grid-template-columns:1fr}.g3{grid-template-columns:1fr 1fr 1fr}}         .emp-row{background:#fff;border:1px solid rgba(220,231,242,.5);border-radius:16px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;transition:all .2s}         .emp-row:active{transform:scale(.98)}         button{transition:transform .1s ease}         button:active{transform:scale(.96)}         .vac-bar{height:4px;border-radius:2px;background:#DCE7F2;overflow:hidden;margin-top:6px}         .vac-bar-fill{height:100%;border-radius:2px;background:#1E40AF}       `}</style>
 
       {/* HERO HEADER */}
       <div style={{ background: "#102650", position: "sticky", top: 0, zIndex: 100, paddingTop: "env(safe-area-inset-top)" }}>
@@ -8079,6 +8081,22 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
           </div>
         </div>
       )}
+
+      {/* ── MODAL: CONFIRMAR ELIMINAR EMPLEADA ── */}
+      {borrarEmpId != null && (() => {
+        const emp = empleados.find(e => e.id === borrarEmpId);
+        return <div style={{ position: "fixed", inset: 0, background: "rgba(16,38,80,.7)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, backdropFilter: "blur(8px)", animation: "fadeIn .2s ease-out" }} onClick={(e) => { if (e.target === e.currentTarget) setBorrarEmpId(null); }}>
+          <div style={{ background: "#fff", borderRadius: 22, width: "100%", maxWidth: 400, padding: 26, boxShadow: "0 32px 80px rgba(0,0,0,.5)", animation: "slideUp .25s ease-out" }}>
+            <div style={{ fontSize: 44, textAlign: "center", marginBottom: 8 }}>🗑️</div>
+            <h3 style={{ fontSize: 19, fontWeight: 800, color: "#102650", textAlign: "center", marginBottom: 8 }}>¿Eliminar a {emp ? emp.nombre : "esta empleada"}?</h3>
+            <p style={{ fontSize: 14, color: "#4A5C75", textAlign: "center", lineHeight: 1.6, marginBottom: 20 }}>Se borrará <strong>permanentemente</strong> su registro, su historial de pagos y sus préstamos. Esta acción no se puede deshacer.</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button onClick={confirmarEliminarEmp} style={{ padding: "15px", background: "#DC2626", color: "#fff", border: "none", borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Sí, eliminar</button>
+              <button onClick={() => setBorrarEmpId(null)} style={{ padding: "13px", background: "transparent", color: "#6B7B92", border: "1.5px solid #DCE7F2", borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter',sans-serif" }}>Cancelar</button>
+            </div>
+          </div>
+        </div>;
+      })()}
 
       {/* ── MODAL: REGISTRAR PAGO DE VACACIONES ADELANTADAS ── */}
       {vacacionesModal && vacacionesTarget && (
