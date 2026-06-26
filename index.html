@@ -9673,8 +9673,23 @@ ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
     '/terminos': 'legal-terminos'
   };
 
+  // ¿Estamos dentro de la app nativa (Capacitor/iOS)? Si es así, abrir
+  // directo en la app (login), no en la página de promoción.
+  function enAppNativa(){
+    try {
+      if (window.Capacitor && (typeof window.Capacitor.isNativePlatform !== 'function' || window.Capacitor.isNativePlatform())) return true;
+      if (window.webkit && window.webkit.messageHandlers && window.navigator.standalone === undefined && /iPhone|iPad|iPod/.test(navigator.userAgent) && !/Safari/.test(navigator.userAgent)) return true;
+    } catch(e){}
+    return false;
+  }
+
   function applyRoute(){
     var h = window.location.hash.replace(/^#/, '') || '/';
+    // En la app: la landing redirige directo a la app/login.
+    if ((h === '/' || h === '') && enAppNativa()) {
+      window.location.replace('#/app');
+      return;
+    }
     var match = ROUTES[h] || ROUTES[h.replace(/\/$/, '')] || 'landing';
     var body = document.body;
     body.classList.remove('view-landing','view-app','view-legal');
