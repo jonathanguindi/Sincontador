@@ -2228,14 +2228,14 @@ function AuthScreen({ onAuth }) {
           {modo !== "verify" && (
           <div>
             <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:6 }}>Correo electrónico</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@correo.com" style={iStyle}/>
+            <input type="email" name="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tu@correo.com" style={iStyle}/>
           </div>
           )}
           {modo !== "forgot" && modo !== "verify" && (
             <div>
               <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:6 }}>Contraseña</label>
               <div style={{ position:"relative" }}>
-                <input type={showPass?"text":"password"} value={pass} onChange={e=>setPass(e.target.value)}
+                <input type={showPass?"text":"password"} name="password" autoComplete={modo==="register"?"new-password":"current-password"} value={pass} onChange={e=>setPass(e.target.value)}
                   placeholder={modo==="register"?"Mínimo 6 caracteres":"••••••••"}
                   onKeyDown={e=>e.key==="Enter"&&(modo==="login"?login():register())}
                   style={{...iStyle, paddingRight:44}}/>
