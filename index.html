@@ -9639,6 +9639,26 @@ function RootContent() {
 ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
 </script>
 
+<script>
+/* Candado anti-desplazamiento horizontal: el WebView de iOS (app) a veces deja
+   correr la pantalla de lado aunque el contenido cabe. Esto lo fuerza a 0. */
+(function(){
+  function lockH(){
+    try {
+      var se = document.scrollingElement || document.documentElement;
+      if (se && se.scrollLeft) se.scrollLeft = 0;
+      if (document.body && document.body.scrollLeft) document.body.scrollLeft = 0;
+      if (window.pageXOffset) window.scrollTo(0, window.pageYOffset);
+    } catch(e){}
+  }
+  window.addEventListener('scroll', lockH, true);
+  document.addEventListener('touchmove', lockH, { passive: true });
+  document.addEventListener('touchend', lockH, { passive: true });
+  document.addEventListener('gesturechange', lockH, { passive: true });
+  setInterval(lockH, 250);
+})();
+</script>
+
 </div>
 
 
