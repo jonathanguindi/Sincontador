@@ -4872,7 +4872,7 @@ ${empleadasHTML}
           </div>
         );
       })()}
-      <style>{`         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}         input,select,textarea{transition:border .15s;font-family:'Inter',sans-serif}         input:focus,select:focus,textarea:focus{border-color:#1E40AF!important;outline:none;box-shadow:0 0 0 3px rgba(30,64,175,0.12)}         .tab{font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:14px 0;background:transparent;border:none;border-bottom:2px solid transparent;color:rgba(220,231,242,.7);margin-right:20px;cursor:pointer;transition:all .15s;white-space:nowrap}         .tab.on{border-bottom-color:#fff;color:#fff;font-weight:700}         .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}         .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}         @media(max-width:560px){.g2{grid-template-columns:1fr}.g3{grid-template-columns:1fr 1fr 1fr}}         .emp-row{background:#fff;border:1px solid rgba(220,231,242,.5);border-radius:16px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;transition:all .2s}         .emp-row:active{transform:scale(.98)}         button{transition:transform .1s ease}         button:active{transform:scale(.96)}         .vac-bar{height:4px;border-radius:2px;background:#DCE7F2;overflow:hidden;margin-top:6px}         .vac-bar-fill{height:100%;border-radius:2px;background:#1E40AF}       `}</style>
+      <style>{`         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}         input,select,textarea{transition:border .15s;font-family:'Inter',sans-serif;min-width:0;max-width:100%}         input:focus,select:focus,textarea:focus{border-color:#1E40AF!important;outline:none;box-shadow:0 0 0 3px rgba(30,64,175,0.12)}         .tab{font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:14px 0;background:transparent;border:none;border-bottom:2px solid transparent;color:rgba(220,231,242,.7);margin-right:20px;cursor:pointer;transition:all .15s;white-space:nowrap}         .tab.on{border-bottom-color:#fff;color:#fff;font-weight:700}         .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}         .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}         @media(max-width:560px){.g2{grid-template-columns:1fr}.g3{grid-template-columns:1fr 1fr 1fr}}         .emp-row{background:#fff;border:1px solid rgba(220,231,242,.5);border-radius:16px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;transition:all .2s}         .emp-row:active{transform:scale(.98)}         button{transition:transform .1s ease}         button:active{transform:scale(.96)}         .vac-bar{height:4px;border-radius:2px;background:#DCE7F2;overflow:hidden;margin-top:6px}         .vac-bar-fill{height:100%;border-radius:2px;background:#1E40AF}       `}</style>
 
       {/* HERO HEADER */}
       <div style={{ background: "#102650", position: "sticky", top: 0, zIndex: 100, paddingTop: "env(safe-area-inset-top)" }}>
@@ -7833,14 +7833,14 @@ body{font-family:'Times New Roman',serif;color:#102650;background:#fff;font-size
             <div style={{ marginBottom: 12, fontSize: 12, color: C.muted }}>{historialFiltrado.length} pago(s)</div>
             {historialFiltrado.length===0&&<div style={{ textAlign:"center", padding:"50px", color:C.muted }}><div style={{ fontSize:36, marginBottom:10 }}>📄</div>Sin pagos aún</div>}
             {historialFiltrado.map(h => <Card key={h.id}>
-              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-                <div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{h.empNombre}</div>
                   <div style={{ fontSize: 11, color: C.muted }}>Q{h.quincena} · {h.mes} {h.año} · {h.metodoPago} · {h.fecha}</div>
                   {h.notas&&<div style={{ fontSize: 11, color:C.muted, fontStyle:"italic" }}>{h.notas}</div>}
                   {h.adjuntos?.length>0&&<div style={{ display:"flex", gap:6, marginTop:8 }}>{h.adjuntos.map((a,i)=><img key={i} src={a.data} style={{ width:44, height:44, objectFit:"cover", borderRadius:4, border:`1px solid ${C.border}`, cursor:"pointer" }} onClick={()=>window.open(a.data,"_blank")}/>)}</div>}
                 </div>
-                <div style={{ textAlign: "right" }}>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
                   <div style={{ fontWeight:700, fontSize:18, color:C.accent }}>{fmt(h.netoEmpleado)}</div>
                   <div style={{ fontSize:10, color:C.muted }}>Costo: {fmt(h.costoMensualEmpleador)}</div>
                 </div>
