@@ -2348,14 +2348,7 @@ function OnboardingScreen({ onClose, onAgregarEmpleada }) {
     if (slide === 0) {
       return (
         <div style={{ width: "100%", height: "100%", background: "linear-gradient(180deg, #102650 0%, #1E3A8A 50%, #1E40AF 100%)", position: "relative", overflow: "hidden" }}>
-          <div className="onb-coin" style={{ top: "15%", left: "15%", "--dx": "10px", "--dy": "-15px", "--r": "-10deg" }}>$</div>
-          <div className="onb-bill" style={{ top: "12%", right: "18%", "--dx": "-8px", "--dy": "10px", "--r": "8deg" }}>$20</div>
-          <div className="onb-coin" style={{ top: "25%", right: "10%", "--dx": "5px", "--dy": "-10px", "--r": "15deg", animationDelay: ".5s" }}>$</div>
-          <div className="onb-bill" style={{ top: "30%", left: "8%", "--dx": "-12px", "--dy": "8px", "--r": "-15deg", animationDelay: "1s" }}>$50</div>
-          <div className="onb-coin" style={{ top: "40%", left: "75%", width: 24, height: 24, fontSize: 12, animationDelay: "1.5s" }}>$</div>
-          <div className="onb-bill" style={{ top: "8%", left: "45%", width: 45, height: 22, fontSize: 8, "--r": "25deg", animationDelay: ".8s" }}>$10</div>
-          
-          <div className="onb-anim" style={{ position: "absolute", bottom: 200, left: 0, right: 0, padding: "0 32px", textAlign: "center" }}>
+          <div className="onb-anim" style={{ position: "absolute", top: "50%", left: 0, right: 0, transform: "translateY(-50%)", padding: "0 32px", textAlign: "center" }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
               <svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{ filter: "drop-shadow(0 8px 24px rgba(154,205,252,.4))" }}>
                 <rect width="100" height="100" rx="22" fill="#fff"/>
