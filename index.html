@@ -3873,6 +3873,22 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
       return mesOk && añoOk && qOk;
     });
   };
+  // ¿Ya se pagó la quincena ACTUAL de esta empleada? (sirve cualquier día del mes)
+  // Días 1–15 = primera quincena · días 16–fin = segunda quincena.
+  const quincenaActualPagada = (emp, fecha) => {
+    const f = fecha || new Date();
+    const mesNombre = MESES[f.getMonth()];
+    const añoStr = String(f.getFullYear());
+    const quincenaStr = f.getDate() <= 15 ? "1" : "2";
+    return historial.some(r => {
+      if (r.empId !== emp.id) return false;
+      const mesOk = r.mes === mesNombre || r.mes === f.getMonth() + 1;
+      const añoOk = String(r.año) === añoStr;
+      const qOk = String(r.quincena) === quincenaStr;
+      return mesOk && añoOk && qOk;
+    });
+  };
+
   // Empleadas pendientes hoy (solo si hoy es día de pago)
   const empleadasPendientesPago = (() => {
     const hoyD = new Date();
@@ -5185,8 +5201,11 @@ ${empleadasHTML}
                       {emp.foto ? <img src={emp.foto} style={{ width: 48, height: 48, borderRadius: 14, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 48, height: 48, borderRadius: 14, background: "#E0EDFB", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "#102650", flexShrink: 0 }}>{emp.nombre.charAt(0).toUpperCase()}</div>}
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontWeight: 600, fontSize: 15, color: "#102650", letterSpacing: "-.01em", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{emp.nombre}</div>
-                        <div style={{ fontSize: 12, color: C.mutedLight, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                        <div style={{ fontSize: 12, color: C.mutedLight, marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                           {emp.puesto} · {ant.texto}
+                          {quincenaActualPagada(emp)
+                            ? <span style={{ background: "#E7F7EE", color: "#0F7A3D", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 8 }}>✓ Pagada</span>
+                            : <span style={{ background: "#FFF3CD", color: "#92740E", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 8 }}>⏳ Pendiente</span>}
                           {vac && vac.diasRestantes <= 60 && <span style={{ background: "#FFF3CD", color: "#92740E", fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 8 }}>🌴 {vac.diasRestantes}d</span>}
                         </div>
                       </div>
@@ -5258,6 +5277,9 @@ ${empleadasHTML}
                     <div style={{ fontWeight: 700, fontSize: 17, color: "#102650", letterSpacing: "-.01em", display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
                       {emp.nombre}
                       {bajo && <span style={{ fontSize: 10, background: "#FFF0EB", color: C.warn, padding: "3px 8px", borderRadius: 8, fontWeight: 700 }}>⚠ bajo mínimo</span>}
+                      {quincenaActualPagada(emp)
+                        ? <span style={{ fontSize: 10, background: "#E7F7EE", color: "#0F7A3D", padding: "3px 8px", borderRadius: 8, fontWeight: 700 }}>✓ Quincena pagada</span>
+                        : <span style={{ fontSize: 10, background: "#FFF3CD", color: "#92740E", padding: "3px 8px", borderRadius: 8, fontWeight: 700 }}>⏳ Quincena pendiente</span>}
                     </div>
                     <div style={{ fontSize: 12, color: C.mutedLight, marginTop: 3, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                       {emp.puesto} · Región {emp.region}{emp.fechaIngreso ? ` · ${ant.texto}` : ""}
