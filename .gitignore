@@ -1,1 +1,16 @@
-node_modules/
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+**/.idea/
+*.iml
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Xcode
+apple/**/xcuserdata/
+apple/**/*.xcworkspace/xcuserdata/
