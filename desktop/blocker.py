@@ -118,10 +118,13 @@ def load_domains() -> list[str]:
 
 
 def block_lines() -> str:
+    # 0.0.0.0 bloquea IPv4 y "::" bloquea IPv6 — sin la linea IPv6, dominios
+    # con direccion AAAA (p. ej. caliente.mx) seguirian siendo accesibles.
     lines = [MARK_START]
     for d in load_domains():
-        lines.append(f"0.0.0.0 {d}")
-        lines.append(f"0.0.0.0 www.{d}")
+        for name in (d, f"www.{d}"):
+            lines.append(f"0.0.0.0 {name}")
+            lines.append(f":: {name}")
     lines.append(MARK_END)
     return "\n".join(lines) + "\n"
 
