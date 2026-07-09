@@ -1,56 +1,44 @@
 # SinApuestas — Computadora (Windows / macOS / Linux)
 
-Bloquea los sitios de apuestas en tu computadora **sin VPN**. Funciona
-escribiendo en el archivo `hosts` del sistema (los dominios de apuestas se
-mandan a "ninguna parte"), y un **vigilante** que corre como servicio repara el
-archivo si alguien lo borra. Para desactivarlo hace falta la **contraseña de
-custodio** y que haya terminado el **período de compromiso**.
+App para bloquear las apuestas en tu computadora **sin VPN**. Es una app con
+ventana: la abres, eliges qué bloquear, la computadora te pide permiso, aceptas
+y queda **todo bloqueado**. No hay que usar la terminal.
 
-## Requisitos
-- Python 3.9 o más nuevo.
-- Permisos de administrador (para escribir en `hosts` e instalar el servicio).
+## Cómo usarla (fácil, doble clic)
 
-## Instalar
+Necesitas **Python 3** instalado (en Mac ya viene; en Windows se baja gratis de
+python.org — marca "Add Python to PATH" al instalar).
 
-**Windows** — abre PowerShell **como administrador**:
-```powershell
-powershell -ExecutionPolicy Bypass -File install_windows.ps1
-```
+- **Windows:** doble clic en **`SinApuestas-Windows.bat`**
+- **Mac:** doble clic en **`SinApuestas-Mac.command`**
+  *(la primera vez, si Mac lo bloquea: clic derecho → Abrir → Abrir)*
 
-**macOS**:
-```bash
-sudo bash install_macos.sh
-```
+Al abrir:
+1. La computadora te pide **permiso de administrador** (ventana del sistema).
+   Acéptalo — es lo que le da poder para bloquear.
+2. Elige qué bloquear (viene marcado "todas las casas de apuestas y casinos") y,
+   si quieres, escribe otros sitios.
+3. Pon una **contraseña** (ideal que la ponga otra persona) y los **días de
+   compromiso**.
+4. Toca **"🛡️ Bloquear todo"**. ¡Listo!
 
-**Linux**:
-```bash
-sudo bash install_linux.sh
-```
+El bloqueo se mantiene solo, aunque reinicies la computadora. Para desactivarlo,
+abres la app otra vez y pones la contraseña (solo funciona si ya pasó el período
+de compromiso).
 
-El instalador te pide una contraseña (idealmente la escribe otra persona) y los
-días de compromiso, aplica el bloqueo y registra el servicio para que arranque
-solo con el sistema.
+## ¿Qué bloquea?
+Cientos de casas de apuestas y casinos de todo el mundo (bet365, betcris, stake,
+1xbet, betano, caliente y muchas más), por IPv4 e IPv6. Además, un "vigilante"
+repara el bloqueo si alguien intenta quitarlo.
 
-## Comandos útiles
-```bash
-python3 blocker.py status   # ver estado
-sudo python3 blocker.py stop   # desactivar (pide contraseña; respeta el compromiso)
-```
+## Para técnicos: modo por línea de comandos
+Si prefieres la terminal, `blocker.py` sigue disponible:
+`sudo python3 blocker.py setup | status | stop | apply`. Y `update_worldwide.py`
+descarga listas públicas gigantes para cobertura mundial. Ver comentarios en los
+archivos.
 
-## Cómo hacerlo lo más difícil de saltar
-- Que **otra persona** ponga la contraseña y no te la diga hasta terminar el
-  compromiso.
-- Usa un período largo (30, 90 días o un año).
-- Usa una cuenta de usuario **sin permisos de administrador** en tu día a día:
-  así no puedes editar `hosts` ni parar el servicio tú mismo.
-- En el navegador, desactiva el "DNS seguro / DNS-over-HTTPS" (en Chrome:
-  Configuración → Privacidad → Usar DNS seguro → desactivar), porque puede
-  saltarse el archivo `hosts`.
-
-## Limitaciones honestas
-- Con permisos de administrador, cualquiera puede parar el servicio y editar
-  `hosts`. Por eso la contraseña de un tercero y una cuenta sin admin son clave.
-- No bloquea apps de escritorio dedicadas que no usen estos dominios (la mayoría
-  de casas de apuestas en compu se usan por navegador, así que quedan cubiertas).
-- Bloquea por dominio: agrega los que falten en `domains.txt` y corre
-  `sudo python3 blocker.py apply`.
+## Limitación honesta
+Con permisos de administrador, alguien decidido puede detener el servicio. Por
+eso lo más fuerte es que **la contraseña la tenga otra persona** y usar un
+período de compromiso largo. La mayoría de casas de apuestas en computadora se
+usan por navegador, así que quedan cubiertas.
