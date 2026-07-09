@@ -9,10 +9,10 @@
             <key>PayloadType</key><string>com.apple.webcontent-filter</string>
             <key>PayloadVersion</key><integer>1</integer>
             <key>PayloadIdentifier</key><string>com.sinapuestas.webfilter</string>
-            <key>PayloadUUID</key><string>6BFDEB53-3252-4102-BD91-F303CFFFE064</string>
+            <key>PayloadUUID</key><string>7555D876-CFA4-41B0-9C0D-FE5690C5E389</string>
             <key>PayloadDisplayName</key><string>Filtro de apuestas</string>
             <key>FilterType</key><string>BuiltIn</string>
-            <key>AutoFilterEnabled</key><false/>
+            <key>AutoFilterEnabled</key><true/>
             <key>BlacklistedURLs</key>
             <array>
                 <dict>
@@ -1486,7 +1486,7 @@
     <key>PayloadDescription</key><string>Bloquea los sitios de apuestas en Safari sin usar VPN. Para maxima proteccion, instalalo en un dispositivo supervisado o con un codigo de Tiempo en Pantalla que guarde otra persona.</string>
     <key>PayloadIdentifier</key><string>com.sinapuestas.profile</string>
     <key>PayloadType</key><string>Configuration</string>
-    <key>PayloadUUID</key><string>AFD49A3B-3238-4C84-A6B1-74A902736134</string>
+    <key>PayloadUUID</key><string>15BF7FBA-FDF3-4A39-BE30-33D99EB16453</string>
     <key>PayloadVersion</key><integer>1</integer>
     <key>PayloadRemovalDisallowed</key><true/>
 </dict>

@@ -62,7 +62,7 @@ def build(domains: list[str]) -> str:
             <key>PayloadUUID</key><string>{payload_uuid}</string>
             <key>PayloadDisplayName</key><string>Filtro de apuestas</string>
             <key>FilterType</key><string>BuiltIn</string>
-            <key>AutoFilterEnabled</key><false/>
+            <key>AutoFilterEnabled</key><true/>
             <key>BlacklistedURLs</key>
             <array>
 {blacklist_xml(domains)}
