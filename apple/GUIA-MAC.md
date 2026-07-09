@@ -46,6 +46,36 @@ le pide permiso al iPhone, tú aceptas, y bloquea las apps y sitios de apuestas.
 4. Verifica que en **Signing** esté tu Apple ID en "Team" y que diga
    "Automatically manage signing".
 
+## Paso 3.5 — Bloqueo masivo automático + extensiones (recomendado)
+
+Con esto la app bloquea **cientos de sitios de apuestas en Safari solos** (sin
+elegirlos), reaplica el bloqueo para que persista, y muestra una pantalla de
+bloqueo con tu marca.
+
+**a) App Group compartido**
+1. En **Signing & Capabilities** del target principal: **+ Capability → App
+   Groups** → agrega `group.com.sinapuestas.shared`.
+2. Arrastra a Xcode estos archivos (marca "Copy items if needed"):
+   `SelectionStore.swift`, `BettingDomains.swift` (bloqueo masivo web),
+   `BlockModel.swift` actualizado.
+
+**b) Extensión Monitor** (mantiene el bloqueo activo)
+1. **File → New → Target → Device Activity Monitor Extension** → nómbrala
+   `Monitor`.
+2. Reemplaza su archivo por `DeviceActivityMonitorExtension.swift`.
+3. A ESTE target agrégale: capacidad **Family Controls**, **App Group**
+   `group.com.sinapuestas.shared`, y en "Target Membership" marca también
+   `BettingDomains.swift` y `SelectionStore.swift`.
+
+**c) Extensión de pantalla de bloqueo** (tu marca)
+1. **File → New → Target → Shield Configuration Extension** → nómbrala `Shield`.
+2. Reemplaza su archivo por `ShieldConfigurationExtension.swift`.
+3. Agrégale la capacidad **Family Controls**.
+
+> Los 3 targets (app, Monitor, Shield) deben tener **Family Controls**; app y
+> Monitor además el **mismo App Group**. `BettingDomains.swift` y
+> `SelectionStore.swift` deben pertenecer a la app y al Monitor.
+
 ## Paso 4 — Probar en tu iPhone
 1. Conecta el iPhone a la Mac con el cable. Si pregunta, toca "Confiar".
 2. Arriba en Xcode, donde dice el dispositivo, elige **tu iPhone**.
