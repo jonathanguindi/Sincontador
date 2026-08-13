@@ -1632,7 +1632,7 @@ async function authHeaders() {
 }
 
 // ─── STORAGE (cloud per user) ─────────────────────────────────────────────────
-const KEYS = { empleados: "emp_v1", leyes: "leyes_v1", historial: "hist_v1", prestamos: "prest_v1", hijos: "hijos_v1", gastos: "gastos_v1", padres: "padres_v1" };
+const KEYS = { empleados: "emp_v1", leyes: "leyes_v1", historial: "hist_v1", prestamos: "prest_v1", hijos: "hijos_v1", gastos: "gastos_v1", padres: "padres_v1", onboarding: "onboarding_v1" };
 
 async function load(key, userId) {
   try {
@@ -3163,11 +3163,13 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
   const [formEmp, setFormEmp] = useState(empVacio);
   
   // ── ONBOARDING ──────────────────────────────────
-  const [mostrarOnboarding, setMostrarOnboarding] = useState(() => {
-    return !localStorage.getItem(`onboarding_visto_${user.id}`);
-  });
+  // Arranca oculto: se decide DESPUÉS de cargar los datos de la cuenta,
+  // para no mostrar la introducción a quien ya usó el app (aunque el
+  // teléfono haya borrado el almacenamiento local).
+  const [mostrarOnboarding, setMostrarOnboarding] = useState(false);
   const cerrarOnboarding = () => {
-    localStorage.setItem(`onboarding_visto_${user.id}`, "1");
+    try { localStorage.setItem(`onboarding_visto_${user.id}`, "1"); } catch(e) {}
+    save(KEYS.onboarding, true, user.id);  // recordar en la cuenta (Supabase)
     setMostrarOnboarding(false);
   };
   const irAAgregarEmpleada = () => {
@@ -3386,6 +3388,13 @@ function MainApp({ user, onLogout, suscripcion, onVerSuscripcion }) {
       const hj = await load(KEYS.hijos, uid); if (hj) setHijos(hj);
       const gs = await load(KEYS.gastos, uid); if (gs) setGastos(gs);
       const pd = await load(KEYS.padres, uid); if (pd) setPadres(pd);
+      // Mostrar la introducción SOLO si es una cuenta nueva:
+      // no la ha visto (ni en la cuenta ni en este teléfono) y no tiene datos aún.
+      const yaVioEnCuenta = await load(KEYS.onboarding, uid);
+      let yaVioLocal = false;
+      try { yaVioLocal = !!localStorage.getItem(`onboarding_visto_${uid}`); } catch(e) {}
+      const tieneDatos = (e && e.length) || (h && h.length) || (p && p.length);
+      if (!yaVioEnCuenta && !yaVioLocal && !tieneDatos) setMostrarOnboarding(true);
       setReady(true);
     })();
   }, []);
