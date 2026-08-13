@@ -1795,7 +1795,7 @@ function proximasVacaciones(fechaIngreso, vacacionesDias) {
   return { fecha: prox.toLocaleDateString("es-PA"), diasRestantes, aniosCumplidos: aniosCompletos + 1 };
 }
 
-function calcularPago(emp, leyes, prestamos, extraDias, prestamosSkip) {
+function calcularPago(emp, leyes, prestamos, extraDias, prestamosSkip, opts) {
   const salarioMensual = parseFloat(emp.salario) || 0;
   const quincena = salarioMensual / 2;
   const horasEx = parseFloat(emp.horasExtra) || 0;
@@ -1819,14 +1819,21 @@ function calcularPago(emp, leyes, prestamos, extraDias, prestamosSkip) {
   const prestEmpleado = prestEmpleadoTodos.filter(p => !skipSet.has(p.id));
   const prestEmpleadoSkipped = prestEmpleadoTodos.filter(p => skipSet.has(p.id));
   const descPrestamo = prestEmpleado.reduce((s, p) => s + Math.min(p.cuotaMensual / 2, p.saldo), 0);
-  const netoEmpleado = quincena + pagoHorasEx + pagoHorasExNoc + bonos + pagoDiasLibres - descAusencias - otrosDeduc - descPrestamo;
+  const netoQuincena = quincena + pagoHorasEx + pagoHorasExNoc + bonos + pagoDiasLibres - descAusencias - otrosDeduc - descPrestamo;
+  // Décimo tercer mes: se paga en 3 partidas, el día 15 (1ª quincena) de abril, agosto y diciembre.
+  // Cada partida equivale a un tercio de un mes de salario (salario / 3).
+  const mesRecibo = opts && opts.mes;
+  const quincenaRecibo = opts && opts.quincena;
+  const esDecimoPartida = !!(leyes.decimoTercerMes) && String(quincenaRecibo) === "1" && (mesRecibo === "Abril" || mesRecibo === "Agosto" || mesRecibo === "Diciembre");
+  const decimoPagado = esDecimoPartida ? salarioMensual / 3 : 0;
+  const netoEmpleado = netoQuincena + decimoPagado;
   const cssPatron = (emp.aplicaCSS !== false) ? pct(salarioMensual, leyes.cssEmpleador) : 0;
   const segEduPatron = (emp.aplicaSegEdu !== false) ? pct(salarioMensual, leyes.segEduEmpleador) : 0;
   const decimoTercerMensual = leyes.decimoTercerMes ? salarioMensual / 12 : 0;
   const vacacionesMensual = (salarioMensual / 12) * (leyes.vacacionesDias / 30);
   const costoMensualEmpleador = salarioMensual + cssPatron + segEduPatron + decimoTercerMensual + vacacionesMensual;
   const salMin = emp.region === "1" ? leyes.salarioMinimoR1 : leyes.salarioMinimoR2;
-  return { emp, salarioMensual, quincena, pagoHorasEx, pagoHorasExNoc, bonos, descAusencias, pagoDiasLibres, diasLibres, otrosDeduc, descPrestamo, prestEmpleado, prestEmpleadoSkipped, prestEmpleadoTodos, netoEmpleado, cssPatron, segEduPatron, decimoTercerMensual, vacacionesMensual, costoMensualEmpleador, salMin, bajoMinimo: salarioMensual < salMin,
+  return { emp, salarioMensual, quincena, pagoHorasEx, pagoHorasExNoc, bonos, descAusencias, pagoDiasLibres, diasLibres, otrosDeduc, descPrestamo, prestEmpleado, prestEmpleadoSkipped, prestEmpleadoTodos, netoQuincena, decimoPagado, esDecimoPartida, netoEmpleado, cssPatron, segEduPatron, decimoTercerMensual, vacacionesMensual, costoMensualEmpleador, salMin, bajoMinimo: salarioMensual < salMin,
     // Alias para las plantillas de recibo/WhatsApp/export (mismos datos, otro nombre)
     totalHoras: pagoHorasEx + pagoHorasExNoc, totalDiasLibres: pagoDiasLibres, descuentoPrestamo: descPrestamo, totalFeriados: 0 };
 }
@@ -3854,13 +3861,13 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
 
   const abrirPago = (emp) => {
     setEmpActivo(emp); setDiasLibresPago([]); setPrestSkipIds([]);
-    setPagoData(calcularPago(emp, leyes, prestamos, [], []));
+    setPagoData(calcularPago(emp, leyes, prestamos, [], [], { mes: reciboMes, quincena: quincenaNum }));
     setAdjuntos([]); setNotasPago(""); setCorreoDestino(emp.correo || ""); setVistaEmp("pago");
   };
 
   useEffect(() => {
-    if (empActivo && vistaEmp === "pago") setPagoData(calcularPago(empActivo, leyes, prestamos, diasLibresPago, prestSkipIds));
-  }, [diasLibresPago, prestSkipIds]);
+    if (empActivo && vistaEmp === "pago") setPagoData(calcularPago(empActivo, leyes, prestamos, diasLibresPago, prestSkipIds, { mes: reciboMes, quincena: quincenaNum }));
+  }, [diasLibresPago, prestSkipIds, reciboMes, quincenaNum]);
 
   // ─── PAGO RÁPIDO: helpers ───
   // Es día de pago si es 15, 30, 31 (cualquier mes que los tenga),
@@ -3922,13 +3929,14 @@ body{font-family:'Inter',sans-serif;color:#102650;background:#fff;font-size:12px
   const pagarRapido = (emp, fotoData, diasLibres, skipIds) => {
     const diasL = diasLibres || [];
     const skips = skipIds || [];
-    const data = calcularPago(emp, leyes, prestamos, diasL, skips);
-    // Abonar SOLO los préstamos no skippeados (data.prestEmpleado ya los filtra)
-    data.prestEmpleado.forEach(p => abonarPrest(p.id, Math.min(p.cuotaMensual / 2, p.saldo)));
     const hoyD = new Date();
     const mes = MESES[hoyD.getMonth()];        // "Mayo", igual que el pago normal
     const año = String(hoyD.getFullYear());    // "2026", como string
     const quincena = hoyD.getDate() === 15 ? "1" : "2";  // string, como en el normal
+    // Pasar mes/quincena para que incluya el décimo si es partida (15 abr/ago/dic)
+    const data = calcularPago(emp, leyes, prestamos, diasL, skips, { mes, quincena });
+    // Abonar SOLO los préstamos no skippeados (data.prestEmpleado ya los filtra)
+    data.prestEmpleado.forEach(p => abonarPrest(p.id, Math.min(p.cuotaMensual / 2, p.saldo)));
     const adjuntosArr = fotoData ? [{ nombre: "comprobante.jpg", data: fotoData }] : [];
     const registro = {
       id: Date.now(),
@@ -4131,7 +4139,10 @@ body{font-family:'Inter',Arial,sans-serif;max-width:600px;margin:20px auto;color
   
   ${p.totalDiasLibres > 0 ? `<div class="section">Días libres trabajados</div>
   <div class="row"><span>Total días libres</span><span>+${fmt(p.totalDiasLibres)}</span></div>` : ""}
-  
+
+  ${p.decimoPagado > 0 ? `<div class="section">Décimo Tercer Mes</div>
+  <div class="row"><span>🎁 Partida de ${reciboMes}</span><span style="color:#107C41">+${fmt(p.decimoPagado)}</span></div>` : ""}
+
   ${p.descuentoPrestamo > 0 ? `<div class="section">Descuentos</div>
   <div class="row"><span>Cuota préstamo</span><span style="color:#B5451B">−${fmt(p.descuentoPrestamo)}</span></div>` : ""}
   
@@ -4289,6 +4300,7 @@ body{font-family:'Inter',Arial,sans-serif;max-width:600px;margin:20px auto;color
       (p.totalFeriados > 0 ? `🎌 *Feriados:* +${fmt(p.totalFeriados)}\n` : "") +
       (p.totalHoras > 0 ? `⏰ *Horas extra:* +${fmt(p.totalHoras)}\n` : "") +
       (p.totalDiasLibres > 0 ? `📆 *Días libres:* +${fmt(p.totalDiasLibres)}\n` : "") +
+      (p.decimoPagado > 0 ? `🎁 *Décimo Tercer Mes (${reciboMes}):* +${fmt(p.decimoPagado)}\n` : "") +
       (p.descuentoPrestamo > 0 ? `🏦 *Descuento préstamo:* -${fmt(p.descuentoPrestamo)}\n` : "") +
       `\n💳 *Método de pago:* ${metodoPago}\n` +
       (notasPago ? `📝 *Notas:* ${notasPago}\n` : "") +
@@ -4480,7 +4492,7 @@ ${empleadasHTML}
       {/* ─── MODAL DE PAGO RÁPIDO (día de quincena) ─── */}
       {quickPay.open && empleadasPendientesPago.length > 0 && quickPay.index < empleadasPendientesPago.length && (() => {
         const emp = empleadasPendientesPago[quickPay.index];
-        const data = calcularPago(emp, leyes, prestamos, quickPay.diasLibres, quickPay.skipIds);
+        const data = calcularPago(emp, leyes, prestamos, quickPay.diasLibres, quickPay.skipIds, { mes: MESES[new Date().getMonth()], quincena: new Date().getDate() === 15 ? "1" : "2" });
         const total = empleadasPendientesPago.length;
         const hoyD = new Date();
         const fechaTxt = hoyD.toLocaleDateString("es-PA", { weekday: "long", day: "numeric", month: "long" });
@@ -4799,7 +4811,7 @@ ${empleadasHTML}
       {/* ─── CAPA DE CONFIRMACIÓN DE PAGO RÁPIDO ─── */}
       {quickPay.open && quickPay.confirming && empleadasPendientesPago[quickPay.index] && (() => {
         const emp = empleadasPendientesPago[quickPay.index];
-        const data = calcularPago(emp, leyes, prestamos, quickPay.diasLibres, quickPay.skipIds);
+        const data = calcularPago(emp, leyes, prestamos, quickPay.diasLibres, quickPay.skipIds, { mes: MESES[new Date().getMonth()], quincena: new Date().getDate() === 15 ? "1" : "2" });
         return (
           <div style={{
             position: "fixed", inset: 0, zIndex: 10000,
@@ -6916,6 +6928,17 @@ ${pagos.length > 0 ? `<h3 style="color:#1E40AF;font-size:14px;text-transform:upp
                 </div>
               )}
             </Card>
+            {pagoData.decimoPagado > 0 && (
+              <Card style={{ background: "#E7F7EE", border: "1px solid #A7E3C3" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontSize: 26 }}>🎁</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, color: "#0F7A3D", fontSize: 14 }}>Esta quincena incluye el Décimo Tercer Mes</div>
+                    <div style={{ fontSize: 12, color: "#146c3f", marginTop: 2 }}>Partida de {reciboMes} · se suma <strong>{fmt(pagoData.decimoPagado)}</strong> a lo que recibe {pagoData.emp.nombre.split(" ")[0]}.</div>
+                  </div>
+                </div>
+              </Card>
+            )}
             <Card>
               <SectionTitle color="#1E40AF">💵 Desglose</SectionTitle>
               <LineRow label="Salario mensual" value={fmt(pagoData.salarioMensual)} />
@@ -6923,6 +6946,7 @@ ${pagos.length > 0 ? `<h3 style="color:#1E40AF;font-size:14px;text-transform:upp
               {pagoData.pagoHorasEx > 0 && <LineRow sub label={`Horas Extra (+${leyes.horasExtraRecargo}%)`} value={`+ ${fmt(pagoData.pagoHorasEx)}`} color="#1E40AF" />}
               {pagoData.bonos > 0 && <LineRow sub label="Bonos" value={`+ ${fmt(pagoData.bonos)}`} color="#1E40AF" />}
               {pagoData.pagoDiasLibres > 0 && <LineRow sub label={`Días libres (${pagoData.diasLibres.length})`} value={`+ ${fmt(pagoData.pagoDiasLibres)}`} color="#1E40AF" />}
+              {pagoData.decimoPagado > 0 && <LineRow sub label={`🎁 Décimo Tercer Mes (${reciboMes})`} value={`+ ${fmt(pagoData.decimoPagado)}`} color="#107C41" />}
               {pagoData.descAusencias > 0 && <LineRow sub label="Ausencias" value={`− ${fmt(pagoData.descAusencias)}`} color={C.warn} />}
               {(pagoData.prestEmpleadoTodos || []).length > 0 && (pagoData.prestEmpleadoTodos || []).map(p => {
                 const isSkipped = prestSkipIds.includes(p.id);
